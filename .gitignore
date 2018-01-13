@@ -1,0 +1,5 @@
+*.so
+*.so.full
+*.so.debug
+*.pico
+
