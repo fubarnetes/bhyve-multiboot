@@ -3,3 +3,5 @@
 *.so.debug
 *.pico
 
+*.core
+.gdb_history
