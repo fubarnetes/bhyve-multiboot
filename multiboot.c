@@ -8,44 +8,69 @@
 #include <setjmp.h>
 
 #include <libmultiboot.h>
-
-#define USERBOOT_VERSION 4
-#define MALLOCSZ	(64*1024*1024)
-
-#define MULTIBOOT_MAGIC 0x1BADB002
-
-#define ERROR(err, str) do { \
-			errno = err; \
-			perror(str); \
-		} while(0)
-
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
+#include <multiboot.h>
 
 struct loader_callbacks *callbacks;
 void *callbacks_arg;
 
 static jmp_buf jb;
 
-struct multiboot_header {
-	uint32_t magic;
-	uint32_t flags;
-	uint32_t checksum;
-};
-
 /*
-* Find the location of the multiboot header. 
-* The Multiboot header must be contained completely within the first 8192
-* bytes of the OS image, and must be longword (32-bit) aligned.
-*/
-struct multiboot_header* mb_scan(void *kernel, size_t kernsz) {
+ * Find the location of the Multiboot or Multiboot2 header. 
+ * The Multiboot header must be contained completely within the first 8192
+ * bytes of the OS image, and must be longword (32-bit) aligned.
+ * The Multiboot2 header must be contained completely within the first 32768
+ * bytes of the OS image, and must be 64-bit aligned.
+ */
+struct multiboot* mb_scan(void *kernel, size_t kernsz) {
+    struct multiboot *mb = malloc(sizeof(struct multiboot));
     uint32_t* magic = NULL;
+
     printf("Scanning for multiboot header...\n");
-    for (magic = kernel; (void*) magic < (kernel + MIN(kernsz, 8192) - sizeof(struct multiboot_header)); magic++) {
-        if (*magic != MULTIBOOT_MAGIC)
+
+    for (magic = kernel;
+        (void*) magic < (
+            kernel + MIN(kernsz, 32768)
+            - MAX(sizeof(struct multiboot2_header),
+                  sizeof(struct multiboot_header)));
+        magic++)
+    {
+        if ((*magic != MULTIBOOT1_MAGIC) && (*magic != MULTIBOOT2_MAGIC))
             continue;
 
-        return (struct multiboot_header *) magic;
+        mb->magic = *magic;
+
+        /* For now, let's prefer Multiboot over Multiboot2,  as we don't aim to
+         * support that yet. */
+        if (mb->magic == MULTIBOOT1_MAGIC) {
+            mb->info.mb.header = (struct multiboot_header*) magic;
+            printf("Multiboot magic at offset 0x%lx\n",
+                   ((void*)magic - kernel));
+
+            /* Check whether the Multiboot header is contained completely
+             * within the first 8192 bytes required by the spec. */
+            if ((void*) magic >= kernel + 8192
+                - sizeof(struct multiboot_header))
+            {
+                ERROR(EINVAL,
+                    "Multiboot header found, but not in the first 8192 bytes.");
+                continue;
+            }
+        }
+        else if (mb->magic == MULTIBOOT2_MAGIC) {
+            printf("Multiboot2 magic at offset 0x%lx\n",
+                   ((void*)magic - kernel));
+            mb->info.mb2.header = (struct multiboot2_header*) magic;
+            if ((void*) magic >= kernel + 8192
+                - mb->info.mb2.header->header_length)
+            {
+                ERROR(EINVAL,
+                    "Multiboot2 header found, but not in the first 32 kiB.");
+                continue;
+            }
+        }
+
+        return mb;
     }
 
     return NULL;
@@ -58,7 +83,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 	FILE *kernfile = NULL;
     size_t kernsz = 0;
     void *kernel = NULL;
-    struct multiboot_header *mb;
+    struct multiboot *mb;
 	int i = 0;
 
 	if (version < USERBOOT_VERSION)
@@ -103,12 +128,13 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
         goto error;
     }
 
-    /* Map the kernel */
+    /* Get the kernel file size */
     fseek(kernfile, 0L, SEEK_END);
     kernsz = ftell(kernfile);
     rewind(kernfile);
     printf("kernel size = %ld\n", kernsz);
 
+    /* Map the kernel */
     kernel = mmap(NULL, kernsz, PROT_READ, MAP_PRIVATE, fileno(kernfile), 0);
     if (kernel == MAP_FAILED) {
         ERROR(errno, "Unable to map kernel");
@@ -120,15 +146,22 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
         ERROR(EINVAL, "No multiboot header found.");
         goto error;
     }
-    printf("multiboot header at offset %lx\n", ((void*)mb - kernel));
 
- cleanup:
+    /* We don't support multiboot2 yet */
+    if (mb->magic == MULTIBOOT2_MAGIC) {
+        ERROR(ENOTSUP, "Multiboot2 is not supported yet.");
+        goto error;
+    };
+
+    /* Cleanup. */
+    if (mb) free(mb);
     if (kernel != MAP_FAILED) munmap(kernel, kernsz);
 	fclose(kernfile);
 	CALLBACK(exit, 0);
 	return;
 
  error:
+    if (mb) free(mb);
     if (kernel != MAP_FAILED) munmap(kernel, kernsz);
 	if (kernfile) fclose(kernfile);
 	longjmp(jb, 1);
