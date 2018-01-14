@@ -3,6 +3,7 @@ SRCS=		multiboot.c
 
 CFLAGS=		-Wall
 CFLAGS+=	-I.
+LDADD=		-lelf
 
 LDFLAGS+=	-Wl,-Bsymbolic
 

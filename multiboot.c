@@ -6,9 +6,13 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <setjmp.h>
+#include <sys/queue.h>
 
 #include <libmultiboot.h>
 #include <multiboot.h>
+
+#include <libelf.h>
+#include <gelf.h>
 
 struct loader_callbacks *callbacks;
 void *callbacks_arg;
@@ -87,6 +91,40 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
     return NULL;
 }
 
+uint32_t multiboot_load(void* kernel, size_t kernsz,
+                        struct multiboot_header *mb)
+{
+    Elf *kernel_elf = NULL;
+
+    /* Check if the file is an ELF */
+    if (elf_version(EV_CURRENT) == EV_NONE) {
+        ERROR(ENOTSUP, "Wrong libelf version.");
+        return ENOTSUP;
+    }
+
+    if (((kernel_elf = elf_memory(kernel, kernsz)) == NULL)
+        || (elf_kind(kernel_elf) != ELF_K_ELF))
+    {
+        /* Not an ELF */
+        if (!(mb->flags & MULTIBOOT_AOUT_KLUDGE)) {
+            ERROR(ENOEXEC, "Kernel is not an ELF or has address information in"
+                "Multiboot header.");
+            return ENOEXEC;
+        }
+    }
+    else  if (mb->flags & MULTIBOOT_AOUT_KLUDGE) {
+        printf("Using load addresses specified in Multiboot header:\r\n");
+        printf("  load @ 0x%08x - 0x%08x\r\n", mb->load_addr,
+                mb->load_end_addr);
+        printf("  entry @ 0x%08x\r\n", mb->entry_addr);
+    }
+    else {
+        /* FIXME: Implement an ELF loader. */
+    }
+
+    return 0;
+}
+
 void
 loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 {
@@ -162,7 +200,12 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
     if (mb->magic == MULTIBOOT2_MAGIC) {
         ERROR(ENOTSUP, "Multiboot2 is not supported yet.");
         goto error;
-    };
+    }
+    else {
+        if (multiboot_load(kernel, kernsz, mb->info.mb.header)) {
+            goto error;
+        }
+    }
 
     /* Cleanup. */
     if (mb) free(mb);
