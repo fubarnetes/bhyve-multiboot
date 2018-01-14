@@ -44,8 +44,6 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
          * support that yet. */
         if (mb->magic == MULTIBOOT1_MAGIC) {
             mb->info.mb.header = (struct multiboot_header*) magic;
-            printf("Multiboot magic at offset 0x%lx\n",
-                   ((void*)magic - kernel));
 
             /* Check whether the Multiboot header is contained completely
              * within the first 8192 bytes required by the spec. */
@@ -56,10 +54,20 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
                     "Multiboot header found, but not in the first 8192 bytes.");
                 continue;
             }
+
+            if ((uint32_t) (mb->info.mb.header->magic
+                + mb->info.mb.header->flags + mb->info.mb.header->checksum))
+            {
+                ERROR(EINVAL,
+                    "Multiboot header has invalid checksum.");
+                continue;
+
+            }
+
+            printf("Multiboot magic at offset 0x%lx\n",
+                   ((void*)magic - kernel));
         }
         else if (mb->magic == MULTIBOOT2_MAGIC) {
-            printf("Multiboot2 magic at offset 0x%lx\n",
-                   ((void*)magic - kernel));
             mb->info.mb2.header = (struct multiboot2_header*) magic;
             if ((void*) magic >= kernel + 8192
                 - mb->info.mb2.header->header_length)
@@ -68,6 +76,9 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
                     "Multiboot2 header found, but not in the first 32 kiB.");
                 continue;
             }
+
+            printf("Multiboot2 magic at offset 0x%lx\n",
+                   ((void*)magic - kernel));
         }
 
         return mb;
