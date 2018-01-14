@@ -26,7 +26,7 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
     struct multiboot *mb = malloc(sizeof(struct multiboot));
     uint32_t* magic = NULL;
 
-    printf("Scanning for multiboot header...\n");
+    printf("Scanning for multiboot header...\r\n");
 
     for (magic = kernel;
         (void*) magic < (
@@ -64,7 +64,7 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
 
             }
 
-            printf("Multiboot magic at offset 0x%lx\n",
+            printf("Multiboot magic at offset 0x%lx\r\n",
                    ((void*)magic - kernel));
         }
         else if (mb->magic == MULTIBOOT2_MAGIC) {
@@ -77,7 +77,7 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
                 continue;
             }
 
-            printf("Multiboot2 magic at offset 0x%lx\n",
+            printf("Multiboot2 magic at offset 0x%lx\r\n",
                    ((void*)magic - kernel));
         }
 
@@ -143,7 +143,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
     fseek(kernfile, 0L, SEEK_END);
     kernsz = ftell(kernfile);
     rewind(kernfile);
-    printf("kernel size = %ld\n", kernsz);
+    printf("kernel size = %ld\r\n", kernsz);
 
     /* Map the kernel */
     kernel = mmap(NULL, kernsz, PROT_READ, MAP_PRIVATE, fileno(kernfile), 0);
