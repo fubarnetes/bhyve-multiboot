@@ -19,14 +19,17 @@ void *callbacks_arg;
 
 static jmp_buf jb;
 
-/*
- * Find the location of the Multiboot or Multiboot2 header. 
+/**
+ * @brief find the location of the Multiboot or Multiboot2 header.
+ *
  * The Multiboot header must be contained completely within the first 8192
  * bytes of the OS image, and must be longword (32-bit) aligned.
  * The Multiboot2 header must be contained completely within the first 32768
  * bytes of the OS image, and must be 64-bit aligned.
  */
-struct multiboot* mb_scan(void *kernel, size_t kernsz) {
+struct multiboot*
+mb_scan(void *kernel, size_t kernsz)
+{
     struct multiboot *mb = malloc(sizeof(struct multiboot));
     uint32_t* magic = NULL;
 
@@ -65,7 +68,6 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
                 ERROR(EINVAL,
                     "Multiboot header has invalid checksum.");
                 continue;
-
             }
 
             printf("Multiboot magic at offset 0x%lx\r\n",
@@ -91,8 +93,8 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz) {
     return NULL;
 }
 
-uint32_t multiboot_load(void* kernel, size_t kernsz,
-                        struct multiboot_header *mb)
+uint32_t
+multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb)
 {
     Elf *kernel_elf = NULL;
 
