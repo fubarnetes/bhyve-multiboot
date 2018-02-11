@@ -1,7 +1,14 @@
 *.so
 *.so.full
 *.so.debug
+*.o
+*.po
 *.pico
-
+*.a
+*.full
+*.debug
 *.core
-.gdb_history
+.depend.*
+
+tests/Kyuafile
+tests/test-allocator
