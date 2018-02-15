@@ -41,8 +41,11 @@
 #include <libelf.h>
 #include <gelf.h>
 
+#include <allocator.h>
+
 struct loader_callbacks *callbacks;
 void *callbacks_arg;
+void *entry = NULL;
 
 static jmp_buf jb;
 
@@ -120,38 +123,254 @@ mb_scan(void *kernel, size_t kernsz)
     return NULL;
 }
 
-uint32_t
-multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb)
+/**
+ * @brief Determine how to load the multiboot image.
+ *
+ * @param kernel     pointer to the kernel
+ * @param kernsz     size of the kernel
+ * @param kernel_elf pointer to the ELF object to initialize if loading as an
+ *                   ELF.
+ * @param mb         pointer to the multiboot header
+ * @return enum LOAD_TYPE
+ */
+enum LOAD_TYPE
+multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
+                     struct multiboot_header *mb)
 {
-    Elf *kernel_elf = NULL;
-
-    /* Check if the file is an ELF */
+    /* Initialize libelf */
     if (elf_version(EV_CURRENT) == EV_NONE) {
         ERROR(ENOTSUP, "Wrong libelf version.");
         return ENOTSUP;
     }
 
-    if (((kernel_elf = elf_memory(kernel, kernsz)) == NULL)
-        || (elf_kind(kernel_elf) != ELF_K_ELF))
+    /* Check if the file is an ELF */
+    if (((*kernel_elf = elf_memory(kernel, kernsz)) == NULL)
+        || (elf_kind(*kernel_elf) != ELF_K_ELF))
     {
-        /* Not an ELF */
-        if (!(mb->flags & MULTIBOOT_AOUT_KLUDGE)) {
-            ERROR(ENOEXEC, "Kernel is not an ELF or has address information in"
-                "Multiboot header.");
-            return ENOEXEC;
-        }
-    }
-    else  if (mb->flags & MULTIBOOT_AOUT_KLUDGE) {
-        printf("Using load addresses specified in Multiboot header:\r\n");
-        printf("  load @ 0x%08x - 0x%08x\r\n", mb->load_addr,
-                mb->load_end_addr);
-        printf("  entry @ 0x%08x\r\n", mb->entry_addr);
-    }
-    else {
-        /* FIXME: Implement an ELF loader. */
+        /* Not an ELF. Try loading it as an a.out. */
+        return LOAD_AOUT;
     }
 
+    /*
+     * This kernel is an ELF, but if it has address information set in the
+     * multiboot header, try loading it as an a.out.
+     */
+    if (mb->flags & MULTIBOOT_AOUT_KLUDGE)
+        return LOAD_AOUT;
+
+    return LOAD_ELF;
+}
+
+/**
+ * @brief Attempt to load a file as an a.out object.
+ *
+ * @param kernel    pointer to the kernel
+ * @param kernsz    size of the kernel
+ * @param mb        pointer to the multiboot header
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t
+multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
+{
+    size_t offset = 0;
+    size_t loadsz = 0;
+    size_t bsssz = 0;
+    if (!(mb->flags & MULTIBOOT_AOUT_KLUDGE)) {
+        ERROR(ENOEXEC, "Kernel does not support a.out kludge");
+        return ENOEXEC;
+    }
+
+    /* Implement a.out loader */
+    printf("Using load addresses specified in Multiboot header:\r\n");
+    printf("  load @ 0x%08x - 0x%08x\r\n", mb->load_addr,
+            mb->load_end_addr);
+    printf("  bss @ 0x%08x - 0x%08x\r\n", mb->load_end_addr,
+            mb->bss_end_addr);
+    printf("  entry @ 0x%08x\r\n", mb->entry_addr);
+
+    /* load_addr must be less than or equal to header_addr. */
+    if (mb->load_addr > mb->header_addr) {
+        ERROR(EINVAL,
+                "Loader address must be less than or equal to header_addr.");
+        return EINVAL;
+    }
+
+    /*
+     * The offset in the OS image file at which to start loading is defined by
+     * the offset at which the header was found, minus (header_addr - load_addr)
+     */
+    offset = ((void*) mb - kernel) - (mb->header_addr - mb->load_addr);
+
+    /*
+     * If load_end_addr is zero, assume that the text and data segments occupy
+     * the whole OS image file.
+     */
+    if (!mb->load_end_addr) {
+        loadsz = (kernsz - offset);
+    }
+    else {
+        /* (load_end_addr - load_addr) specifies how much data to load. */
+        loadsz = mb->load_end_addr - mb->load_addr;
+    }
+
+    if (!allocate_at((void*) (uintptr_t) mb->load_addr, loadsz)) {
+        /*
+         * Could not allocate memory for the text and data, something else is
+         * there already!
+         */
+        ERROR(ENOMEM, "could not allocate segment for text and data section");
+        return ENOMEM;
+    }
+
+    if (mb->bss_end_addr) {
+        /*
+         * Handle .bss sections.
+         */
+        if (mb->bss_end_addr < mb->load_end_addr) {
+            ERROR(EINVAL, "bss_end_addr < mb->load_end_addr");
+            return EINVAL;
+        }
+
+        bsssz = mb->bss_end_addr - mb->load_end_addr;
+
+        if (!allocate_at((void*) (uintptr_t) mb->load_end_addr, bsssz)) {
+            /*
+             * Could not allocate memory for the bss, something else is
+             * there already!
+             */
+            ERROR(ENOMEM, "could not allocate memory for bss section");
+            return ENOMEM;
+        }
+        /*
+         * TODO: guarantee that that the bss section is initialized to 0.
+         *
+         * Check whether that might already be the case for bhyve.
+         *
+         * Since libuserboot doesn't really have memset(3) callback, we probably
+         * have to allocate a whole page using calloc(3) and copy that in, and
+         * free it again.
+         */
+    }
+
+    entry = (void*) (uintptr_t) mb->entry_addr;
+
     return 0;
+}
+
+/**
+ * @brief Load an ELF object.
+ *
+ * @param kernel pointer to the kernel
+ * @param kernsz size of the kernel
+ * @param kernel_elf kernel ELF object
+ * @return uint32_t 0 on success, error code on failure.
+ */
+uint32_t
+multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf) {
+    size_t elf_phnum = 0;
+    int elf_phidx = 0;
+    GElf_Ehdr elf_ehdr;
+    GElf_Phdr elf_phdr;
+
+    /* Get the elf Ehdr */
+    if (!gelf_getehdr(kernel_elf, &elf_ehdr)) {
+        ERROR(EINVAL, "Could not get number of ELF headers");
+        return EINVAL;
+    }
+
+    /* Get the number of ELF program headers. */
+    if (!elf_getphnum(kernel_elf, &elf_phnum)) {
+        ERROR(EINVAL, "Could not get number of ELF program headers.");
+        return EINVAL;
+    }
+
+    if (elf_ehdr.e_machine != EM_X86_64 &&
+        elf_ehdr.e_machine != EM_386 &&
+        elf_ehdr.e_machine != EM_486)
+    {
+        ERROR(ENOEXEC, "Wrong architecture");
+        return ENOEXEC;
+    }
+
+    if (elf_ehdr.e_type != ET_EXEC && elf_ehdr.e_type != ET_DYN) {
+        ERROR(ENOEXEC, "ELF is not executable or a dynamic object");
+        return ENOEXEC;
+    }
+
+    for (elf_phidx = 0; elf_phidx < elf_phnum; elf_phidx++) {
+        gelf_getphdr(kernel_elf, elf_phidx, &elf_phdr);
+
+        if (elf_phdr.p_type != PT_LOAD)
+            continue;
+
+        printf("loadable segment @%p, offset %lu, len=%lu\n",
+            (void*) elf_phdr.p_paddr,
+            elf_phdr.p_offset,
+            elf_phdr.p_filesz);
+
+        /*
+         * For PT_LOAD segments, p_memsz should be smaller than, or equal to
+         * p_filesz. Make sure this is actually the case, so we don't write
+         * out-of-bounds.
+         */
+        if (elf_phdr.p_filesz > elf_phdr.p_memsz) {
+            ERROR(EINVAL, "p_filesz is larger than p_memsz");
+            return EINVAL;
+        }
+
+        /*
+         * Make sure we don't read outside the kernel elf.
+         * FIXME: p_offset + p_filesz can overflow here. Check that.
+         */
+        if (elf_phdr.p_offset + elf_phdr.p_filesz > kernsz) {
+            ERROR(EINVAL, "p_offset larger than elf size.");
+            return EINVAL;
+        }
+
+        if (!allocate_at((void*) elf_phdr.p_paddr, elf_phdr.p_memsz)) {
+            /*
+             * Could not allocate memory for the segment, something else is
+             * there already!
+             */
+            ERROR(ENOMEM, "could not allocate segment for segment");
+            return ENOMEM;
+        }
+
+        callbacks->copyin(callbacks_arg,
+            kernel+elf_phdr.p_offset,
+            elf_phdr.p_paddr,
+            elf_phdr.p_filesz);
+
+        /*
+         * TODO: Handle segment .bss sections.
+         *
+         * If this segment has a .bss section, guarantee that that it is
+         * initialized to 0.
+         *
+         * Check whether that might already be the case for bhyve.
+         *
+         * Since libuserboot doesn't really have memset(3) callback, we probably
+         * have to allocate a whole page using calloc(3) and copy that in, and
+         * free it again.
+         */
+    }
+
+    entry = (void*) elf_ehdr.e_entry;
+    return 0;
+}
+
+uint32_t
+multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb)
+{
+    Elf *kernel_elf = NULL;
+
+    switch (multiboot_load_type(kernel, kernsz, &kernel_elf, mb)) {
+        case LOAD_AOUT:
+            return multiboot_load_aout(kernel, kernsz, mb);
+
+        case LOAD_ELF:
+            return multiboot_load_elf(kernel, kernsz, kernel_elf);
+    }
 }
 
 void
@@ -199,7 +418,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
             }
 		}
     }
-	
+
     /* Check that a kernel file was provided */
     if (!kernfile) {
         ERROR(EINVAL, "No kernel given.");

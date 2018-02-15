@@ -32,6 +32,11 @@
 #define USERBOOT_VERSION 4
 #define MALLOCSZ	(64*1024*1024)
 
+enum LOAD_TYPE {
+	LOAD_ELF = 1,
+	LOAD_AOUT = 2,
+};
+
 #define CALLBACK(fn, args...) (callbacks->fn(callbacks_arg , ##args))
 
 extern struct loader_callbacks *callbacks;
