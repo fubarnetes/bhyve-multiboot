@@ -69,7 +69,7 @@ ATF_TC_HEAD(allocate_at, tc)
 }
 ATF_TC_BODY(allocate_at, tc)
 {
-    void* p = NULL;
+    void *p = NULL;
 
     /* 
      * Allocate 3 chunks in arbitrary, but not sorted order:
@@ -81,21 +81,21 @@ ATF_TC_BODY(allocate_at, tc)
     p = allocate_at((void*) 0x4200, 0x1000);
     ATF_CHECK_EQ_MSG(p, (void*) 0x4200,
                         "Expected allocation at %p, but pointer returned was at"
-                        "%p.",
+                        " %p.",
                         (void*) 0x4200,
                         p);
 
     p = allocate_at((void*) 0x2200, 0x1000);
     ATF_CHECK_EQ_MSG(p, (void*) 0x2200,
                         "Expected allocation at %p, but pointer returned was at"
-                        "%p.",
+                        " %p.",
                         (void*) 0x2200,
                         p);
 
     p = allocate_at((void*) 0x6200, 0x1000);
     ATF_CHECK_EQ_MSG(p, (void*) 0x6200,
                         "Expected allocation at %p, but pointer returned was at"
-                        "%p.",
+                        " %p.",
                         (void*) 0x6200,
                         p);
 
@@ -110,6 +110,22 @@ ATF_TC_BODY(allocate_at, tc)
     ATF_CHECK_EQ_MSG(p, NULL,
                         "Expected allocation at %p to fail, but %p returned.",
                         (void*) 0x1300, p);
+
+    /* Attempt to allocate a chunk adjacent to the previous chunk */
+    p = allocate_at((void*) 0x3200, 0x1000);
+    ATF_CHECK_EQ_MSG(p, (void*) 0x3200,
+                        "Expected allocation at %p, but pointer returned was at"
+                        " %p.",
+                        (void*) 0x3200,
+                        p);
+
+    /* Attempt to allocate a chunk adjacent to the following chunk */
+    p = allocate_at((void*) 0x5200, 0x1000);
+    ATF_CHECK_EQ_MSG(p, (void*) 0x5200,
+                        "Expected allocation at %p, but pointer returned was at"
+                        " %p.",
+                        (void*) 0x5200,
+                        p);
 }
 
 ATF_TC(allocate_firstfit);

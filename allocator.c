@@ -116,7 +116,7 @@ allocate_at(void* at, size_t size)
         /*
          * Fastpath: skip over any allocation that lies below this allocation.
          */
-        if ((it->addr + it->size) < at)
+        if ((it->addr + it->size) <= at)
             continue;
         
         /*
