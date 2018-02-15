@@ -4,5 +4,14 @@
 *.a
 *.core
 *.gcno
+*.gcov
+*.elf
+*.bin
+
+peda-session-*
+
+.*
+!.gitignore
+!.travis.yml
 
 tests/test-allocator
