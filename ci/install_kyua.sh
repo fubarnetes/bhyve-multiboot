@@ -1,6 +1,6 @@
 #!/bin/sh
 cd
-if [ -d kyua ]; then
+if [ -d kyua/.git ]; then
     cd kyua
     git pull
 else

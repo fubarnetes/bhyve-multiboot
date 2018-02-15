@@ -1,6 +1,6 @@
 #!/bin/sh
 cd
-if [ -d lutok ]; then
+if [ -d lutok/.git ]; then
     cd lutok
     git pull
 else

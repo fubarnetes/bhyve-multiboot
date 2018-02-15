@@ -1,6 +1,6 @@
 #!/bin/sh
 cd
-if [ -d atf ]; then
+if [ -d atf/.git ]; then
     cd atf
     git pull
 else
