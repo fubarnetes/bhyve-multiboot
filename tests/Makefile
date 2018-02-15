@@ -1,14 +1,21 @@
-.include <bsd.init.mk>
-
 LDFLAGS=-L/usr/local/lib
 LIBATF_C=/usr/local/lib/libatf-c.a
-LDADD_atf_c=-latf-c
 
-CFLAGS+=		-Wall
-CFLAGS+=	    -I..
+.PHONY: all
+all: test-allocator
 
-ATF_TESTS_C+=test-allocator
-LDADD.test-allocator+=../libmultiboot_p.a
-DPADD.test-allocator+=../libmultiboot_p.a
+.PHONY: check
+check: all
+	kyua test
+	kyua report
 
-.include <bsd.test.mk>
+.PHONY: clean
+clean:
+	rm -f test-allocator.o
+	rm -f test-allocator
+
+test-allocator: test-allocator.o ../libmultiboot_p.a
+	$(CC) ${LDFLAGS} ${CFLAGS} -o $@ $> ${LIBATF_C} ${LIBELF}
+
+.c.o:
+	$(CC) -c -I.. -Wall ${CFLAGS} -o $@ $>

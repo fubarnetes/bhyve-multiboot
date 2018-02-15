@@ -1,14 +1,38 @@
-LIB=		multiboot
-SHLIB_NAME=	libmultiboot.so
-SRCS=		multiboot.c allocator.c
+CFLAGS+=	-Wall
+CFLAGS+=    -g
 
-CFLAGS=		-Wall
-CFLAGS+=	-I.
-LDADD=		-lelf
+OBJS=       multiboot.o allocator.o
 
-LDFLAGS+=	-Wl,-Bsymbolic
+LIBELF=     -lelf
 
-SUBDIR+=tests
+.PHONY: all
+all: libmultiboot.so libmultiboot.so.full libmultiboot.a libmultiboot_p.a
 
-.include <bsd.lib.mk>
-# vim: set noexpandtab ts=4 : 
+.PHONY: clean
+clean:
+	rm -f libmultiboot.a
+	rm -f libmultiboot.so
+	rm -f libmultiboot.so.full
+	rm -f ${OBJS}
+	$(MAKE) -C tests clean
+
+.PHONY: check
+check:
+	$(MAKE) -C tests check
+
+libmultiboot.a: ${OBJS}
+	ar rcs $@ $>
+	strip $@
+
+libmultiboot_p.a: ${OBJS}
+	ar rcs $@ $>
+
+libmultiboot.so: ${OBJS}
+	$(CC) -shared ${CFLAGS} -Wl,-Bsymbolic ${LDFLAGS} -o $@ $> ${LDADD} ${LIBELF}
+	strip $@
+
+libmultiboot.so.full: ${OBJS}
+	$(CC) -shared ${CFLAGS} -Wl,-Bsymbolic ${LDFLAGS} -o $@ $> ${LDADD} ${LIBELF}
+
+.c.o:
+	$(CC) -c -fPIC -I. -Wall ${CFLAGS} -o $@ $>

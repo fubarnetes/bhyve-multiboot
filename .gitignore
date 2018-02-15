@@ -1,14 +1,8 @@
 *.so
 *.so.full
-*.so.debug
 *.o
-*.po
-*.pico
 *.a
-*.full
-*.debug
 *.core
-.depend.*
+*.gcno
 
-tests/Kyuafile
 tests/test-allocator
