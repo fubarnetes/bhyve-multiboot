@@ -4,7 +4,7 @@ compiler: clang
 
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq freebsd-buildutils libelf-freebsd-dev liblua5.2-dev libsqlite3-dev
+- sudo apt-get install -qq freebsd-buildutils libelf-freebsd-dev liblua5.2-dev libsqlite3-dev llvm-3.9-tools
 - ci/install_atf.sh
 - ci/install_lutok.sh
 - ci/install_kyua.sh
@@ -23,4 +23,5 @@ script:
   fmake LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a check
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - find . -name '*.gcno' | xargs llvm-cov-3.9 gcov
+  - bash <(curl -s https://codecov.io/bash) -X gcov
