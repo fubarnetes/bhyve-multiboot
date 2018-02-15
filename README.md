@@ -1,4 +1,7 @@
 # bhyve-multiboot
+
+[![Build Status](https://travis-ci.org/fubarnetes/bhyve-multiboot.svg?branch=master)](https://travis-ci.org/fubarnetes/bhyve-multiboot)
+
 bhyveload bootloader that aims to be multiboot compliant.
 
 ## project status
