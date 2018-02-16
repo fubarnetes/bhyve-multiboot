@@ -126,6 +126,14 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb);
 uint32_t
 multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf);
 
+/**
+ * @brief Load a kernel into guest memory.
+ * 
+ * @param kernel pointer to the kernel buffer
+ * @param kernsz size of the kernel buffer
+ * @param mb pointer to the multiboot header
+ * @return uint32_t 0 on success, error code on failure.
+ */
 uint32_t
 multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb);
 
