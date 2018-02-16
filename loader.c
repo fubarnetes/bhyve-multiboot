@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <setjmp.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <setjmp.h>
 
 #include <loader.h>
@@ -22,8 +21,10 @@ void
 loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 {
 	const char *var, *delim, *value;
-	FILE *kernfile = NULL;
-    size_t kernsz = 0;
+    void *kernfile = NULL;
+    int mode = 0, uid = 0, gid = 0;
+
+    size_t kernsz = 0, resid = 0;
     void *kernel = NULL;
     struct multiboot *mb;
 	int i = 0;
@@ -56,8 +57,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 				goto error;
 			}
 
-			kernfile = fopen(value, "r");
-            if (!kernfile) {
+            if (callbacks->open(callbacks_arg, value, &kernfile)) {
                 ERROR(errno, "could not open kernel");
                 goto error;
             }
@@ -78,15 +78,15 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
     }
 
     /* Get the kernel file size */
-    fseek(kernfile, 0L, SEEK_END);
-    kernsz = ftell(kernfile);
-    rewind(kernfile);
+    callbacks->stat(callbacks_arg, kernfile, &mode, &uid, &gid, &kernsz);
     printf("kernel size = %ld\r\n", kernsz);
 
-    /* Map the kernel */
-    kernel = mmap(NULL, kernsz, PROT_READ, MAP_PRIVATE, fileno(kernfile), 0);
-    if (kernel == MAP_FAILED) {
-        ERROR(errno, "Unable to map kernel");
+    /* Read the kernel */
+    kernel = malloc(kernsz);
+    if (!kernel || callbacks->read(callbacks_arg, kernfile,
+        kernel, kernsz, &resid))
+    {
+        ERROR(errno, "Unable to read kernel");
         goto error;
     }
 
@@ -109,14 +109,14 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 
     /* Cleanup. */
     if (mb) free(mb);
-    if (kernel != MAP_FAILED) munmap(kernel, kernsz);
-	fclose(kernfile);
+    if (kernel) free(kernel);
+    if (kernfile) callbacks->close(callbacks_arg, kernfile);
 	CALLBACK(exit, 0);
 	return;
 
  error:
     if (mb) free(mb);
-    if (kernel != MAP_FAILED) munmap(kernel, kernsz);
-	if (kernfile) fclose(kernfile);
+    if (kernel) free(kernel);
+    if (kernfile) callbacks->close(callbacks_arg, kernfile);
 	longjmp(jb, 1);
 }
