@@ -253,10 +253,10 @@ ATF_TC_BODY(mmap, tc)
 
 ATF_TP_ADD_TCS(tp)
 {
-	ATF_TP_ADD_TC(tp, sequential);
-	ATF_TP_ADD_TC(tp, allocate_at);
-	ATF_TP_ADD_TC(tp, firstfit);
-	ATF_TP_ADD_TC(tp, mmap);
+    ATF_TP_ADD_TC(tp, sequential);
+    ATF_TP_ADD_TC(tp, allocate_at);
+    ATF_TP_ADD_TC(tp, firstfit);
+    ATF_TP_ADD_TC(tp, mmap);
 
-	return atf_no_error();
+    return atf_no_error();
 }
