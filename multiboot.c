@@ -47,6 +47,9 @@ struct loader_callbacks *callbacks;
 void *callbacks_arg;
 void *entry = NULL;
 
+size_t lowmem = 0;
+size_t highmem = 0;
+
 static jmp_buf jb;
 
 /**
@@ -418,6 +421,13 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
             }
 		}
     }
+
+    /* Get the memory layout */
+    callbacks->getmem(callbacks_arg, &lowmem, &highmem);
+    printf("lowmem = %lu, highmem = %lu\r\n", lowmem, highmem);
+
+    /* Initialize the allocator */
+    init_allocator(lowmem, highmem);
 
     /* Check that a kernel file was provided */
     if (!kernfile) {

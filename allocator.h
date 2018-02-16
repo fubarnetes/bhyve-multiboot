@@ -29,11 +29,18 @@
 
 #include <stddef.h>
 
+#define kiB (size_t) (1024)
+#define MiB (size_t) (1024 * 1024)
+#define GiB (size_t) (1024 * 1024 * 1024)
 
 /**
- * @brief the address at which allocations will start.
+ * @brief Initialize the guest memory allocator with the memory mapping
+ * information.
+ *
+ * @param lowmem  the size of the lowmem segment at 1 MiB
+ * @param highmem the size of the highmem segment above 4 GiB
  */
-#define MIN_ALLOC_ADDRESS 0x10000
+void init_allocator(size_t lowmem, size_t highmem);
 
 /**
  * @brief Find a free area for a chunk of at least @param size bytes
