@@ -43,10 +43,25 @@ struct allocation {
 
 static allocations_head_t allocations = TAILQ_HEAD_INITIALIZER(allocations);
 
+static void* min_alloc_address = NULL;
+static void* max_alloc_address = NULL;
+
+/*
+ * Attempt making an allocation, or return if the allocation would go out of
+ * usable memory.
+ */
+#define MK_ALLOCATION(var, at, size) do {\
+        if (!(var = _allocation(at, size))) return 0; \
+    } while (0)
+
 static allocation_t*
 _allocation(void* at, size_t size)
 {
     allocation_t *new_allocation = NULL;
+
+    /* Check that this allocation would not go out of usable memory. */
+    if ((at < min_alloc_address) || (at + size > max_alloc_address))
+        return NULL;
 
     new_allocation = malloc(sizeof(allocation_t));
     new_allocation->addr = at;
@@ -55,20 +70,54 @@ _allocation(void* at, size_t size)
     return new_allocation;
 }
 
+void
+init_allocator(size_t lowmem, size_t highmem)
+{
+    /*
+     * This function is not reentrant. If max_alloc_address or min_alloc_address
+     * are already set, just return.
+     */
+    if (min_alloc_address || max_alloc_address)
+        return;
+
+    /* Start allocating above the 1 MiB watermark, above the VGA hole. */
+    min_alloc_address = (void*) (1 * MiB);
+
+    /*
+     * Check whether we only have a lowmem segment, or there is also a highmem
+     * segment.
+     *
+     * If there is only a lowmem segment, highmem will be set to 0.
+     */
+    if (highmem) {
+        max_alloc_address = (void*) (4 * GiB) + highmem;
+
+        /*
+         * Reserve (allocate) the MMAP hole above the lowmem segment.
+         * By default, this starts at 3 GiB (can be changed with
+         * vm_set_lowmem_limit, but bhyveload does not do this.)
+         */
+        allocate_at((void*) lowmem, 4 * GiB - lowmem);
+    }
+    else {
+        max_alloc_address = (void*) lowmem;
+    }
+}
+
 void*
 allocate(size_t size)
 {
     allocation_t *it = NULL, *new_allocation = NULL;
-    void *last_endp = (void*) MIN_ALLOC_ADDRESS; /* pointer to the end of the last allocation seen */
+    void *last_endp = min_alloc_address; /* pointer to the end of the last allocation seen */
 
     /*
      * If we do not have any allocations yet, just allocate at the first
      * possible address.
      */
     if (unlikely(TAILQ_EMPTY(&allocations))) {
-        new_allocation =  _allocation((void*) MIN_ALLOC_ADDRESS, size);
+        MK_ALLOCATION(new_allocation, min_alloc_address, size);
         TAILQ_INSERT_HEAD(&allocations, new_allocation, entry);
-        return (void*) MIN_ALLOC_ADDRESS;
+        return (void*) min_alloc_address;
     }
 
     /* 
@@ -78,7 +127,7 @@ allocate(size_t size)
     TAILQ_FOREACH(it, &allocations, entry) {
         if (last_endp && (it->addr >= last_endp + size)) {
             /* We found a sufficiently large space. */
-            new_allocation =  _allocation(last_endp, size);
+            MK_ALLOCATION(new_allocation, last_endp, size);
             TAILQ_INSERT_BEFORE(it, new_allocation, entry);
             return last_endp;
         }
@@ -89,8 +138,8 @@ allocate(size_t size)
      * We arrived at the end of the list without finding a sufficiently
      * large free space. Let's allocate one at the end now.
      */
-    new_allocation =  _allocation(last_endp, size);
-    TAILQ_INSERT_TAIL(&allocations, _allocation(last_endp, size), entry);
+    MK_ALLOCATION(new_allocation, last_endp, size);
+    TAILQ_INSERT_TAIL(&allocations, new_allocation, entry);
     return last_endp;
 }
 
@@ -103,7 +152,7 @@ allocate_at(void* at, size_t size)
      * If we do not have any allocations yet, just allocate the requested chunk.
      */
     if (unlikely(TAILQ_EMPTY(&allocations))) {
-        new_allocation = _allocation((void*) at, size);
+        MK_ALLOCATION(new_allocation, at, size);
         TAILQ_INSERT_HEAD(&allocations, new_allocation, entry);
         return at;
     }
@@ -142,7 +191,7 @@ allocate_at(void* at, size_t size)
          * If the current chunk is the first chunk, insert the allocation at the
          * list head.
          */
-        new_allocation = _allocation((void*) at, size);
+        MK_ALLOCATION(new_allocation, at, size);
 
         if (it == TAILQ_FIRST(&allocations))
             TAILQ_INSERT_HEAD(&allocations, new_allocation, entry);
@@ -154,7 +203,7 @@ allocate_at(void* at, size_t size)
     }
 
     /* We did not find a chunk that lies after the current chunk. */
-    new_allocation = _allocation((void*) at, size);
+    MK_ALLOCATION(new_allocation, at, size);
     TAILQ_INSERT_TAIL(&allocations, new_allocation, entry);
     return at;
 }
