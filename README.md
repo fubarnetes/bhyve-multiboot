@@ -10,11 +10,11 @@ This project is under heavy development and nowhere near ready to use.
 ## usage
 
 ```
-bhyveload -m <memsize> -l /path/to/multiboot.so  -e [[ <key>=<value> ]] <vmname>
+bhyveload -h <hostbase> -m <memsize> -l /path/to/multiboot.so [[-e <key>=<value> ]] <vmname>
 ```
 
-With the following environment variables:
+With the following environment variables specified with -e:
 
-| name   | optional | description               |
-|--------|----------|---------------------------|
-| kernel | no       | Path to the kernel image. |
+| name     | optional | description                                                                     |
+|----------|----------|---------------------------------------------------------------------------------|
+| `kernel` | no       | Path to the kernel image relative to `hostbase`. Must start with a leading `/`. |
