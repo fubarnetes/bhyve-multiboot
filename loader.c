@@ -17,27 +17,15 @@ size_t highmem = 0;
 
 jmp_buf jb;
 
-void
-loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
+struct args loader_args = {
+    .kernel_filename = NULL
+};
+
+uint32_t
+parse_args(struct args* args)
 {
     const char *var, *delim, *value;
-    void *kernfile = NULL;
-    int mode = 0, uid = 0, gid = 0;
-
-    size_t kernsz = 0, resid = 0;
-    void *kernel = NULL;
-    struct multiboot *mb = NULL;
     int i = 0;
-
-    if (version < USERBOOT_VERSION)
-        abort();
-
-    callbacks = cb;
-    callbacks_arg = arg;
-
-    /* setjmp error anchor */
-    if (setjmp(jb))
-        return;
 
     /* iterate over environment */
     while ( (var = CALLBACK(getenv, i++)) ) {
@@ -54,14 +42,43 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
         if (!strncmp(var, "kernel", delim-var)) {
             if (!value) {
                 ERROR(EINVAL,"no kernel filename provided");
-                goto error;
+                return EINVAL;
             }
 
-            if (callbacks->open(callbacks_arg, value, &kernfile)) {
-                ERROR(errno, "could not open kernel");
-                goto error;
-            }
+            args->kernel_filename = value;
         }
+    }
+
+    return 0;
+}
+
+void
+loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
+{
+    void *kernfile = NULL;
+    int mode = 0, uid = 0, gid = 0;
+
+    size_t kernsz = 0, resid = 0;
+    void *kernel = NULL;
+    struct multiboot *mb = NULL;
+
+    if (version < USERBOOT_VERSION)
+        abort();
+
+    callbacks = cb;
+    callbacks_arg = arg;
+
+    /* setjmp error anchor */
+    if (setjmp(jb))
+        return;
+
+    if (parse_args(&loader_args))
+        goto error;
+
+    if (callbacks->open(callbacks_arg, loader_args.kernel_filename, &kernfile))
+    {
+        ERROR(errno, "could not open kernel");
+        goto error;
     }
 
     /* Get the memory layout */
@@ -90,7 +107,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
         goto error;
     }
 
-    /* Check that a kernel file was provided */
+    /* Scan for the multiboot header */
     if (!(mb = mb_scan(kernel, kernsz))) {
         ERROR(EINVAL, "No multiboot header found.");
         goto error;
