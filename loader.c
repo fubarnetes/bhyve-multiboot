@@ -26,7 +26,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 
     size_t kernsz = 0, resid = 0;
     void *kernel = NULL;
-    struct multiboot *mb;
+    struct multiboot *mb = NULL;
     int i = 0;
 
     if (version < USERBOOT_VERSION)
