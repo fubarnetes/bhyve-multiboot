@@ -20,48 +20,48 @@ jmp_buf jb;
 void
 loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 {
-	const char *var, *delim, *value;
+    const char *var, *delim, *value;
     void *kernfile = NULL;
     int mode = 0, uid = 0, gid = 0;
 
     size_t kernsz = 0, resid = 0;
     void *kernel = NULL;
     struct multiboot *mb;
-	int i = 0;
+    int i = 0;
 
-	if (version < USERBOOT_VERSION)
-		abort();
+    if (version < USERBOOT_VERSION)
+        abort();
 
-	callbacks = cb;
-	callbacks_arg = arg;
+    callbacks = cb;
+    callbacks_arg = arg;
 
-	/* setjmp error anchor */
-	if (setjmp(jb))
-		return;
+    /* setjmp error anchor */
+    if (setjmp(jb))
+        return;
 
-	/* iterate over environment */
-	while ( (var = CALLBACK(getenv, i++)) ) {
-		delim = strchr(var, '=');
-		value = delim+1;
+    /* iterate over environment */
+    while ( (var = CALLBACK(getenv, i++)) ) {
+        delim = strchr(var, '=');
+        value = delim+1;
 
-		if (!delim) {
-			/* no value specified */
-			delim = var + strlen(var);
-			value = NULL;
-		}
+        if (!delim) {
+            /* no value specified */
+            delim = var + strlen(var);
+            value = NULL;
+        }
 
-		printf("%s\r\n", var);
-		if (!strncmp(var, "kernel", delim-var)) {
-			if (!value) {
-				ERROR(EINVAL,"no kernel filename provided");
-				goto error;
-			}
+        printf("%s\r\n", var);
+        if (!strncmp(var, "kernel", delim-var)) {
+            if (!value) {
+                ERROR(EINVAL,"no kernel filename provided");
+                goto error;
+            }
 
             if (callbacks->open(callbacks_arg, value, &kernfile)) {
                 ERROR(errno, "could not open kernel");
                 goto error;
             }
-		}
+        }
     }
 
     /* Get the memory layout */
@@ -111,12 +111,12 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
     if (mb) free(mb);
     if (kernel) free(kernel);
     if (kernfile) callbacks->close(callbacks_arg, kernfile);
-	CALLBACK(exit, 0);
-	return;
+    CALLBACK(exit, 0);
+    return;
 
  error:
     if (mb) free(mb);
     if (kernel) free(kernel);
     if (kernfile) callbacks->close(callbacks_arg, kernfile);
-	longjmp(jb, 1);
+    longjmp(jb, 1);
 }
