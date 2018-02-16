@@ -3,3 +3,4 @@ syntax(2)
 test_suite("libmultiboot")
 
 atf_test_program{name="test-allocator", }
+atf_test_program{name="test-mock-bhyveload", }
