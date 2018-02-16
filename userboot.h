@@ -26,6 +26,8 @@
  * $FreeBSD: head/sys/boot/userboot/userboot.h 296099 2016-02-26 16:00:16Z marcel $
  */
 
+#pragma once
+
 #include <sys/types.h>
 #include <stdlib.h>
 
