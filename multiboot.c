@@ -27,15 +27,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 
 #include <sys/types.h>
-#include <sys/mman.h>
-#include <setjmp.h>
-#include <sys/queue.h>
 
-#include <libmultiboot.h>
+#include <loader.h>
 #include <multiboot.h>
 
 #include <libelf.h>
@@ -43,23 +39,8 @@
 
 #include <allocator.h>
 
-struct loader_callbacks *callbacks;
-void *callbacks_arg;
 void *entry = NULL;
 
-size_t lowmem = 0;
-size_t highmem = 0;
-
-static jmp_buf jb;
-
-/**
- * @brief find the location of the Multiboot or Multiboot2 header.
- *
- * The Multiboot header must be contained completely within the first 8192
- * bytes of the OS image, and must be longword (32-bit) aligned.
- * The Multiboot2 header must be contained completely within the first 32768
- * bytes of the OS image, and must be 64-bit aligned.
- */
 struct multiboot*
 mb_scan(void *kernel, size_t kernsz)
 {
@@ -126,16 +107,6 @@ mb_scan(void *kernel, size_t kernsz)
     return NULL;
 }
 
-/**
- * @brief Determine how to load the multiboot image.
- *
- * @param kernel     pointer to the kernel
- * @param kernsz     size of the kernel
- * @param kernel_elf pointer to the ELF object to initialize if loading as an
- *                   ELF.
- * @param mb         pointer to the multiboot header
- * @return enum LOAD_TYPE
- */
 enum LOAD_TYPE
 multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
                      struct multiboot_header *mb)
@@ -164,14 +135,6 @@ multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
     return LOAD_ELF;
 }
 
-/**
- * @brief Attempt to load a file as an a.out object.
- *
- * @param kernel    pointer to the kernel
- * @param kernsz    size of the kernel
- * @param mb        pointer to the multiboot header
- * @return uint32_t 0 on success, error code on failure
- */
 uint32_t
 multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
 {
@@ -260,14 +223,6 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
     return 0;
 }
 
-/**
- * @brief Load an ELF object.
- *
- * @param kernel pointer to the kernel
- * @param kernsz size of the kernel
- * @param kernel_elf kernel ELF object
- * @return uint32_t 0 on success, error code on failure.
- */
 uint32_t
 multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf) {
     size_t elf_phnum = 0;
@@ -374,109 +329,6 @@ multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb)
         case LOAD_ELF:
             return multiboot_load_elf(kernel, kernsz, kernel_elf);
     }
-}
-
-void
-loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
-{
-	const char *var, *delim, *value;
-	FILE *kernfile = NULL;
-    size_t kernsz = 0;
-    void *kernel = NULL;
-    struct multiboot *mb;
-	int i = 0;
-
-	if (version < USERBOOT_VERSION)
-		abort();
-
-	callbacks = cb;
-	callbacks_arg = arg;
-
-	/* setjmp error anchor */
-	if (setjmp(jb))
-		return;
-
-	/* iterate over environment */
-	while ( (var = CALLBACK(getenv, i++)) ) {
-		delim = strchr(var, '=');
-		value = delim+1;
-
-		if (!delim) {
-			/* no value specified */
-			delim = var + strlen(var);
-			value = NULL;
-		}
-
-		printf("%s\r\n", var);
-		if (!strncmp(var, "kernel", delim-var)) {
-			if (!value) {
-				ERROR(EINVAL,"no kernel filename provided");
-				goto error;
-			}
-
-			kernfile = fopen(value, "r");
-            if (!kernfile) {
-                ERROR(errno, "could not open kernel");
-                goto error;
-            }
-		}
-    }
-
-    /* Get the memory layout */
-    callbacks->getmem(callbacks_arg, &lowmem, &highmem);
-    printf("lowmem = %lu, highmem = %lu\r\n", lowmem, highmem);
-
-    /* Initialize the allocator */
-    init_allocator(lowmem, highmem);
-
-    /* Check that a kernel file was provided */
-    if (!kernfile) {
-        ERROR(EINVAL, "No kernel given.");
-        goto error;
-    }
-
-    /* Get the kernel file size */
-    fseek(kernfile, 0L, SEEK_END);
-    kernsz = ftell(kernfile);
-    rewind(kernfile);
-    printf("kernel size = %ld\r\n", kernsz);
-
-    /* Map the kernel */
-    kernel = mmap(NULL, kernsz, PROT_READ, MAP_PRIVATE, fileno(kernfile), 0);
-    if (kernel == MAP_FAILED) {
-        ERROR(errno, "Unable to map kernel");
-        goto error;
-    }
-
-    /* Check that a kernel file was provided */
-    if (!(mb = mb_scan(kernel, kernsz))) {
-        ERROR(EINVAL, "No multiboot header found.");
-        goto error;
-    }
-
-    /* We don't support multiboot2 yet */
-    if (mb->magic == MULTIBOOT2_MAGIC) {
-        ERROR(ENOTSUP, "Multiboot2 is not supported yet.");
-        goto error;
-    }
-    else {
-        if (multiboot_load(kernel, kernsz, mb->info.mb.header)) {
-            goto error;
-        }
-    }
-
-    /* Cleanup. */
-    if (mb) free(mb);
-    if (kernel != MAP_FAILED) munmap(kernel, kernsz);
-	fclose(kernfile);
-	CALLBACK(exit, 0);
-	return;
-
- error:
-    if (mb) free(mb);
-    if (kernel != MAP_FAILED) munmap(kernel, kernsz);
-	if (kernfile) fclose(kernfile);
-	longjmp(jb, 1);
 }
 
 /* vim: set noexpandtab ts=4 : */ 

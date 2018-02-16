@@ -26,8 +26,10 @@
  */
 
 #pragma once
-#include <userboot.h>
+#include <setjmp.h>
 #include <sys/types.h>
+
+#include <userboot.h>
 
 #define USERBOOT_VERSION 4
 #define MALLOCSZ	(64*1024*1024)
@@ -41,6 +43,11 @@ enum LOAD_TYPE {
 
 extern struct loader_callbacks *callbacks;
 extern void *callbacks_arg;
+
+/**
+ * @brief Error jump buffer to jump out.
+ */
+extern jmp_buf jb;
 
 #define ERROR(err, str) do { \
 			errno = err; \

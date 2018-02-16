@@ -1,7 +1,7 @@
 CFLAGS+=	-Wall
 CFLAGS+=    -g
 
-OBJS=       multiboot.o allocator.o
+OBJS=       loader.o multiboot.o allocator.o
 
 LIBELF=     -lelf
 

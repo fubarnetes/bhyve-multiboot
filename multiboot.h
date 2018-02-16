@@ -27,11 +27,13 @@
 
 #pragma once
 
+#include <sys/types.h>
+#include <stdlib.h>
+#include <libelf.h>
+
 #define MULTIBOOT1_MAGIC 0x1BADB002
 #define MULTIBOOT1_BOOTLOADER_MAGICC 0x2BADB002
 #define MULTIBOOT2_MAGIC 0xE85250D6
-#include <sys/types.h>
-#include <stdlib.h>
 
 #define MULTIBOOT_AOUT_KLUDGE (1<<16)
 #define MULTIBOOT_FLAG_GRAPHICS (1<<2)
@@ -77,3 +79,54 @@ struct multiboot {
         } mb2;
     } info;
 };
+
+/**
+ * @brief find the location of the Multiboot or Multiboot2 header.
+ *
+ * The Multiboot header must be contained completely within the first 8192
+ * bytes of the OS image, and must be longword (32-bit) aligned.
+ * The Multiboot2 header must be contained completely within the first 32768
+ * bytes of the OS image, and must be 64-bit aligned.
+ */
+struct multiboot* mb_scan(void *kernel, size_t kernsz);
+
+/**
+ * @brief Determine how to load the multiboot image.
+ *
+ * @param kernel     pointer to the kernel
+ * @param kernsz     size of the kernel
+ * @param kernel_elf pointer to the ELF object to initialize if loading as an
+ *                   ELF.
+ * @param mb         pointer to the multiboot header
+ * @return enum LOAD_TYPE
+ */
+enum LOAD_TYPE
+multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
+                     struct multiboot_header *mb);
+
+/**
+ * @brief Attempt to load a file as an a.out object.
+ *
+ * @param kernel    pointer to the kernel
+ * @param kernsz    size of the kernel
+ * @param mb        pointer to the multiboot header
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t
+multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb);
+
+/**
+ * @brief Load an ELF object.
+ *
+ * @param kernel pointer to the kernel
+ * @param kernsz size of the kernel
+ * @param kernel_elf kernel ELF object
+ * @return uint32_t 0 on success, error code on failure.
+ */
+uint32_t
+multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf);
+
+uint32_t
+multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb);
+
+/* vim: set noexpandtab ts=4 : */ 
