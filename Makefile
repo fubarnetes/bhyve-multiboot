@@ -11,6 +11,7 @@ all: libmultiboot.so libmultiboot.so.full libmultiboot.a libmultiboot_p.a
 .PHONY: clean
 clean:
 	rm -f libmultiboot.a
+	rm -f libmultiboot_p.a
 	rm -f libmultiboot.so
 	rm -f libmultiboot.so.full
 	rm -f ${OBJS}

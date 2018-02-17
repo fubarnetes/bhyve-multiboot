@@ -49,6 +49,12 @@ extern void *callbacks_arg;
  */
 extern jmp_buf jb;
 
+struct args {
+    const char* kernel_filename;
+};
+
+extern struct loader_args args;
+
 #define ERROR(err, str) do { \
 			errno = err; \
 			perror(str); \
