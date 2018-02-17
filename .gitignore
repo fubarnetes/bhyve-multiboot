@@ -16,6 +16,7 @@ peda-session-*
 .*
 !.gitignore
 !.travis.yml
+!.codecov.yml
 
 tests/test-allocator
 tests/test-mock-bhyveload

@@ -28,3 +28,11 @@ install:
 
 script:
   fmake CFLAGS="-ftest-coverage -fprofile-arcs" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a check
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/53c5f65b01f3b0095e35
+    on_success: change
+    on_failure: always
+    on_start: never

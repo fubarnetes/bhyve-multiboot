@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/fubarnetes/bhyve-multiboot.svg?branch=master)](https://travis-ci.org/fubarnetes/bhyve-multiboot)
 [![codecov](https://codecov.io/gh/fubarnetes/bhyve-multiboot/branch/master/graph/badge.svg)](https://codecov.io/gh/fubarnetes/bhyve-multiboot)
+ [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/fubarnetes/Lobby)
 
 bhyveload bootloader that aims to be multiboot compliant.
 
