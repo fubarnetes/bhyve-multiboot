@@ -1,10 +1,17 @@
 language: c
 sudo: required
-compiler: clang
+compiler:
+- clang
+- gcc
+
+matrix:
+  include:
+  - compiler: gcc
+    after_success: bash <(curl -s https://codecov.io/bash)
 
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq freebsd-buildutils libelf-freebsd-dev liblua5.2-dev libsqlite3-dev llvm-3.9-tools
+- sudo apt-get install -qq freebsd-buildutils libelf-freebsd-dev liblua5.2-dev libsqlite3-dev
 - ci/install_atf.sh
 - ci/install_lutok.sh
 - ci/install_kyua.sh
@@ -17,11 +24,7 @@ cache:
    - /home/travis/kyua
 
 install:
-  fmake CFLAGS="-I/usr/include/freebsd/ -ftest-coverage" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a
+  fmake CFLAGS="-I/usr/include/freebsd/ -ftest-coverage -fprofile-arcs" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a
 
 script:
-  fmake LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a check
-
-after_success:
-  - find . -name '*.gcno' | xargs llvm-cov-3.9 gcov
-  - bash <(curl -s https://codecov.io/bash) -X gcov
+  fmake CFLAGS="-ftest-coverage -fprofile-arcs" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a check
