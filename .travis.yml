@@ -19,9 +19,9 @@ before_install:
 cache:
   ccache: true
   directories:
-   - /home/travis/atf
-   - /home/travis/lutok
-   - /home/travis/kyua
+    - /home/travis/atf
+    - /home/travis/lutok
+    - /home/travis/kyua
 
 install:
   fmake CFLAGS="-I/usr/include/freebsd/ -ftest-coverage -fprofile-arcs" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a
