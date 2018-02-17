@@ -15,6 +15,7 @@ clean:
 	rm -f libmultiboot.so
 	rm -f libmultiboot.so.full
 	rm -f ${OBJS}
+	rm *.gcda *.gcno *.gcov
 	$(MAKE) -C tests clean
 
 .PHONY: check

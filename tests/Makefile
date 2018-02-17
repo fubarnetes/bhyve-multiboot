@@ -15,6 +15,7 @@ clean:
 	rm -f test-mock-bhyveload.o
 	rm -f mock/bhyveload.o
 	rm -f test-allocator
+	rm *.gcda *.gcno *.gcov
 
 test-mock-bhyveload: test-mock-bhyveload.o mock/bhyveload.o mock/compat-strlcat.o mock/compat-strlcpy.o
 	$(CC) ${LDFLAGS} ${CFLAGS} -o $@ $> ${LIBATF_C} ${LIBELF}

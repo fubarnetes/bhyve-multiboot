@@ -7,6 +7,9 @@
 *.gcov
 *.elf
 *.bin
+*.gcda
+*.gcno
+*.gcov
 
 peda-session-*
 
