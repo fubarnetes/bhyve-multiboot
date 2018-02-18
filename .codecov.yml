@@ -1,0 +1,13 @@
+---
+
+coverage:
+  status:
+    project: off
+    patch: off
+
+coverage:
+  notify:
+    gitter:
+      default:
+        url: "https://webhooks.gitter.im/e/bc349fd27713d9fa74e7"
+        threshold: 1%
