@@ -1,33 +1,20 @@
-language: c
 sudo: required
-compiler:
-- clang
-- gcc
+services:
+  - docker
 
-matrix:
-  include:
-  - compiler: gcc
-    after_success: bash <(curl -s https://codecov.io/bash)
+env:
+  - CC=gcc-7
+  - CC=clang-5.0
 
 before_install:
-- sudo apt-get update -qq
-- sudo apt-get install -qq freebsd-buildutils libelf-freebsd-dev liblua5.2-dev libsqlite3-dev
-- ci/install_atf.sh
-- ci/install_lutok.sh
-- ci/install_kyua.sh
-
-cache:
-  ccache: true
-  directories:
-   - /home/travis/atf
-   - /home/travis/lutok
-   - /home/travis/kyua
-
-install:
-  fmake CFLAGS="-I/usr/include/freebsd/ -ftest-coverage -fprofile-arcs" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a
+  - docker build -t fubarnetes/bhyve-multiboot-ci -f ci/Dockerfile .
 
 script:
-  fmake CFLAGS="-ftest-coverage -fprofile-arcs" LIBELF=-lelf-freebsd LIBATF_C=/usr/lib/libatf-c.a check
+  - docker run -i fubarnetes/bhyve-multiboot-ci build cc=${CC}
+  - docker run -i fubarnetes/bhyve-multiboot-ci build CC=${CC}
+
+after_success:
+  - docker run -i fubarnetes/bhyve-multiboot-ci bash -c "build && coverage"
 
 notifications:
   webhooks:
