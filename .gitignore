@@ -20,3 +20,4 @@ peda-session-*
 
 tests/test-allocator
 tests/test-mock-bhyveload
+tests/test-multiboot

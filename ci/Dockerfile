@@ -17,7 +17,7 @@ ADD ./ci/install_kyua.sh /ci/install_kyua.sh
 RUN sh /ci/install_kyua.sh
 
 RUN apt-get install -qq freebsd-buildutils bmake libelf-freebsd-dev
-RUN apt-get install -qq gcc-7 clang-5.0
+RUN apt-get install -qq gcc-7 clang-5.0 lib32gcc-7-dev
 RUN apt-get install -qq curl
 
 ADD . /build
