@@ -4,6 +4,7 @@ CFLAGS+=    -g
 OBJS=       loader.o multiboot.o allocator.o
 
 LIBELF=     -lelf
+.export LIBELF
 
 .PHONY: all
 all: libmultiboot.so libmultiboot.so.full libmultiboot.a libmultiboot_p.a
