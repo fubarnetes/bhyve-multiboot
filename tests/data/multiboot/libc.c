@@ -34,6 +34,16 @@ void* memcpy(void *dest, const void *src, int n)
     return dest;
 }
 
+void* memset(void *b, int c, unsigned len)
+{
+	char *bb;
+
+        for (bb = (char *)b; len--; )
+                *bb++ = c;
+
+	return (b);
+}
+
 static void print_char(char c)
 {
     outb(0xe9, c);
