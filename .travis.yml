@@ -14,7 +14,8 @@ script:
   - docker run -i fubarnetes/bhyve-multiboot-ci build CC=${CC}
 
 after_success:
-  - docker run -i fubarnetes/bhyve-multiboot-ci bash -c "build && coverage ${CODECOV_TOKEN}"
+  - ci_env=`bash <(curl -s https://codecov.io/env)`
+  - docker run ${ci_env} -i fubarnetes/bhyve-multiboot-ci bash -c "build && coverage"
 
 notifications:
   webhooks:
