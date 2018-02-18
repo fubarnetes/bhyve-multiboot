@@ -1,21 +1,33 @@
-CC=gcc
 CCFLAGS=-m32 -Wall -Wextra -Werror -fno-stack-protector -nostdinc -fno-builtin
 ASFLAGS=-m32
 
-LD=ld
-LDFLAGS=-melf_i386 -T link.ld
-LIBS=$(shell $(CC) $(CCFLAGS) -print-libgcc-file-name)
+UNAME_S!=uname -s
+LIBGCC!=$(CC) ${CCFLAGS} -print-libgcc-file-name
 
+LDEMULATION=elf_i386
+.if ${UNAME_S:MFreeBSD}
+LDEMULATION=elf_i386_fbsd
+.endif
+
+LDFLAGS=-m${LDEMULATION} -T link.ld
+
+.PHONY: all
 all: mmap.elf modules.elf
 
+.PHONY: clean
+clean:
+	rm -f start.o mmap.o libc.o test-multiboot.o
+	rm -f mmap.elf
+	rm -f modules.elf
+
 mmap.elf: start.o mmap.o libc.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ $> $(LIBGCC)
 
 modules.elf: start.o modules.o libc.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ $> $(LIBGCC)
 
-%.o: %.c
-	$(CC) $(CCFLAGS) -c -o $@ $^
+.c.o:
+	$(CC) $(CCFLAGS) -c -o $@ $<
 
-%.o: %.S
-	$(CC) $(ASFLAGS) -c -o $@ $^
+.S.o:
+	$(CC) $(ASFLAGS) -c -o $@ $<
