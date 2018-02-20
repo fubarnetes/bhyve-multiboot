@@ -89,7 +89,7 @@ mb_scan(void *kernel, size_t kernsz)
         }
         else if (mb->magic == MULTIBOOT2_MAGIC) {
             mb->info.mb2.header = (struct multiboot2_header*) magic;
-            if ((void*) magic >= kernel + 8192
+            if ((void*) magic >= kernel + 32768
                 - mb->info.mb2.header->header_length)
             {
                 ERROR(EINVAL,
