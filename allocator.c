@@ -143,6 +143,54 @@ allocate(size_t size)
     return last_endp;
 }
 
+static inline void*
+__align(void* ptr)
+{
+    if ((uintptr_t) ptr % PAGESZ == 0)
+        return ptr;
+    
+    return ptr - ((uintptr_t) ptr % PAGESZ) + PAGESZ;
+}
+
+void*
+allocate_aligned(size_t size)
+{
+    allocation_t *it = NULL, *new_allocation = NULL;
+    void *last_endp = min_alloc_address; /* pointer to the end of the last allocation seen */
+
+    /*
+     * If we do not have any allocations yet, just allocate at the first
+     * possible address.
+     */
+    if (unlikely(TAILQ_EMPTY(&allocations))) {
+        MK_ALLOCATION(new_allocation, __align(min_alloc_address), size);
+        TAILQ_INSERT_HEAD(&allocations, new_allocation, entry);
+        return (void*) min_alloc_address;
+    }
+    
+    /* 
+     * We never remove anything from the list, so we don't need to use the safe
+     * version here.
+     */
+    TAILQ_FOREACH(it, &allocations, entry) {
+        if (last_endp && (it->addr >= last_endp + size)) {
+            /* We found a sufficiently large space. */
+            MK_ALLOCATION(new_allocation, last_endp, size);
+            TAILQ_INSERT_BEFORE(it, new_allocation, entry);
+            return last_endp;
+        }
+        last_endp = __align(it->addr + it->size);
+    }
+
+    /*
+     * We arrived at the end of the list without finding a sufficiently
+     * large free space. Let's allocate one at the end now.
+     */
+    MK_ALLOCATION(new_allocation, last_endp, size);
+    TAILQ_INSERT_TAIL(&allocations, new_allocation, entry);
+    return last_endp;
+}
+
 void*
 allocate_at(void* at, size_t size)
 {

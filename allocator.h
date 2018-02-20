@@ -33,6 +33,8 @@
 #define MiB (size_t) (1024 * 1024)
 #define GiB (size_t) (1024 * 1024 * 1024)
 
+#define PAGESZ ((size_t) 4*kiB) 
+
 /**
  * @brief Initialize the guest memory allocator with the memory mapping
  * information.
@@ -53,6 +55,19 @@ void init_allocator(size_t lowmem, size_t highmem);
  * @return void* pointer to the allocated chunk
  */
 void* allocate(size_t size);
+
+/**
+ * @brief Find a free area for a page-aligned chunk of at least @param size
+ * bytes
+ * 
+ * This is a simple first-fit algorithm.
+ * Iterate over allocations until a fitting space is found, then allocate
+ * a chunk of @param size bytes at the start of this area.
+ * 
+ * @param size size in bytes to allocate
+ * @return void* pointer to the page-aligned allocated chunk
+ */
+void* allocate_aligned(size_t size);
 
 /**
  * @brief Attempt to allocate a chunk of @param size bytes at @param at address.

@@ -251,12 +251,56 @@ ATF_TC_BODY(mmap, tc)
                         p);
 }
 
+ATF_TC(aligned);
+ATF_TC_HEAD(aligned, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test alligned allocations");
+}
+ATF_TC_BODY(aligned, tc)
+{
+    void* p = NULL;
+    init_allocator(1 * MiB +0x5000, 0);
+
+    /* Allocate something in the first page */
+    p = allocate_aligned(0x100);
+    ATF_CHECK_EQ_MSG(p, (void*) (1 * MiB),
+                        "Expected allocation at %p, but pointer returned was at"
+                        " %p.",
+                        (void*) (1 * MiB),
+                        p);
+
+    /* Allocate something in the third pages */
+    allocate_at((void*) (1 * MiB) + 0x2020, PAGESZ-0x20);
+
+    p = allocate_aligned(0x100);
+    ATF_CHECK_EQ_MSG(p, (void*) (1 * MiB + 0x1000),
+                        "Expected allocation at %p, but pointer returned was at"
+                        " %p.",
+                        (void*) (1 * MiB +0x1000),
+                        p);
+
+    p = allocate_aligned(0x100);
+    ATF_CHECK_EQ_MSG(p, (void*) (1 * MiB + 0x3000),
+                        "Expected allocation at %p, but pointer returned was at"
+                        " %p.",
+                        (void*) (1 * MiB +0x3000),
+                        p);
+
+    p = allocate_aligned(0x100);
+    ATF_CHECK_EQ_MSG(p, (void*) (1 * MiB + 0x4000),
+                        "Expected allocation at %p, but pointer returned was at"
+                        " %p.",
+                        (void*) (1 * MiB +0x4000),
+                        p);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, sequential);
     ATF_TP_ADD_TC(tp, allocate_at);
     ATF_TP_ADD_TC(tp, firstfit);
     ATF_TP_ADD_TC(tp, mmap);
+    ATF_TP_ADD_TC(tp, aligned);
 
     return atf_no_error();
 }
