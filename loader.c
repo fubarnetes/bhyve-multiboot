@@ -130,6 +130,11 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
             goto error;
         }
 
+        if (multiboot_info_set_meminfo(&mb->info, lowmem, highmem)) {
+            ERROR(EINVAL, "Could not set up memory information");
+            goto error;
+        }
+
         if (loader_args.cmdline &&
             multiboot_info_set_cmdline(&mb->info, loader_args.cmdline))
         {

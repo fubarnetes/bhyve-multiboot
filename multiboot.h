@@ -222,6 +222,18 @@ uint32_t
 multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb);
 
 /**
+ * @brief Set the multiboot info memory information
+ *
+ * @param info pointer to the multiboot_info struct
+ * @param mem_lower the amount of lower memory starting at 0
+ * @param mem_upper the amount of upper memory starting at 1 MiB
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t
+multiboot_info_set_meminfo(struct multiboot_info* info,
+                           uint32_t mem_lower, uint32_t mem_upper);
+
+/**
  * @brief Set multiboot info command line
  *
  * @param info pointer to the multiboot_info struct
