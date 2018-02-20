@@ -40,6 +40,8 @@
 #define MULTIBOOT_FLAG_MEMORY (1<<1)
 #define MULTIBOOT_FLAG_ALIGN4k (1<<0)
 
+#define PACKED __attribute__((packed))
+
 struct multiboot_header {
 	uint32_t magic;
 	uint32_t flags;
@@ -53,20 +55,20 @@ struct multiboot_header {
     uint32_t width;
     uint32_t height;
     uint32_t depth;
-};
+} PACKED;
 
 struct multiboot2_header {
     uint32_t magic;
     uint32_t architecture;
     uint32_t header_length;
     uint32_t checksum;
-};
+} PACKED;
 
 struct multiboot2_tag {
     uint16_t type;
     uint16_t flags;
     uint32_t size;
-};
+} PACKED;
 
 struct multiboot {
     uint32_t magic;
