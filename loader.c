@@ -135,6 +135,11 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
             goto error;
         }
 
+        if (multiboot_info_set_mmap(&mb->info)) {
+            ERROR(EINVAL, "Could not set up memory map");
+            goto error;
+        }
+
         if (loader_args.cmdline &&
             multiboot_info_set_cmdline(&mb->info, loader_args.cmdline))
         {

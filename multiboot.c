@@ -53,6 +53,54 @@ multiboot_info_set_meminfo(struct multiboot_info* info,
 }
 
 uint32_t
+multiboot_info_set_mmap(struct multiboot_info* info)
+{
+    uint32_t nsegs = 2;
+    uint32_t error = 0;
+
+    struct multiboot_mmap_entry *mmap;
+    mmap = calloc(3, sizeof(struct multiboot_mmap_entry));
+    mmap[0].size = sizeof(struct multiboot_mmap_entry);
+    mmap[0].base_addr = 0;
+    mmap[0].length = 640 * kiB;
+    mmap[0].type = MULTIBOOT_MMAP_AVAILABLE;
+    mmap[1].size = sizeof(struct multiboot_mmap_entry);
+    mmap[1].base_addr = 1 * MiB;
+    mmap[1].length = info->mem_lower - 1*MiB;
+    mmap[1].type = MULTIBOOT_MMAP_AVAILABLE;
+
+    if(info->mem_upper) {
+        nsegs = 3;
+        mmap[2].size = sizeof(struct multiboot_mmap_entry);
+        mmap[2].base_addr = 4 * GiB;
+        mmap[2].length = info->mem_upper;
+        mmap[2].type = MULTIBOOT_MMAP_AVAILABLE;
+    }
+
+    /*
+     * There is a discrepancy with the spec here. While the multiboot spec
+     * version 0.6.96 specifies a negative offset for the size entry, grub as
+     * well as most other bootloaders have the size at offset 0.
+     * Therefore we just point mmap_addr directly at a struct starting with
+     * size as the first element.
+     */
+    info->mmap_length = nsegs * sizeof(struct multiboot_mmap_entry);
+    info->mmap_addr = (uint32_t) allocate(info->mmap_length);
+
+    if (!info->mmap_addr) {
+        error = ENOMEM;
+        goto out;
+    }
+
+    error = CALLBACK(copyin, mmap, info->mmap_addr, info->mmap_length);
+    info->flags |= MULTIBOOT_MMAP;
+
+ out:
+    free(mmap);
+    return error;
+}
+
+uint32_t
 multiboot_info_set_loader_name(struct multiboot_info* info, const char* name)
 {
     uint32_t error = 0;

@@ -136,6 +136,21 @@ struct multiboot_info {
     } PACKED framebuffer;
 } PACKED;
 
+enum multiboot_mmap_type {
+    MULTIBOOT_MMAP_AVAILABLE = 1,
+    MULTIBOOT_MMAP_RESERVED,
+    MULTIBOOT_MMAP_ACPI_RECLAIMABLE,
+    MULTIBOOT_MMAP_NVS,
+    MULTIBOOT_MMAP_BADRAM,
+};
+
+struct multiboot_mmap_entry {
+    uint32_t size;
+    uint64_t base_addr;
+    uint64_t length;
+    uint32_t type;
+} PACKED;
+
 struct multiboot2_header {
     uint32_t magic;
     uint32_t architecture;
@@ -232,6 +247,17 @@ multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb);
 uint32_t
 multiboot_info_set_meminfo(struct multiboot_info* info,
                            uint32_t mem_lower, uint32_t mem_upper);
+
+/**
+ * @brief Set up the e820 memory map and reference it in the multiboot
+ *        information structure.
+ *
+ * @note this function has to be called after @fn multiboot_info_set_mnminfo.
+ *
+ * @param info pointer to the multiboot_info struct
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t multiboot_info_set_mmap(struct multiboot_info* info);
 
 /**
  * @brief Set multiboot info bootloader name
