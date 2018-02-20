@@ -191,6 +191,11 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
         return ENOMEM;
     }
 
+    CALLBACK(copyin,
+            kernel+offset,
+            mb->load_addr,
+            loadsz);
+
     if (mb->bss_end_addr) {
         /*
          * Handle .bss sections.
