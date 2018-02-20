@@ -278,4 +278,13 @@ multiboot_info_set_loader_name(struct multiboot_info* info, const char* name);
  */
 uint32_t
 multiboot_info_set_cmdline(struct multiboot_info* info, const char* cmdline);
+
+/**
+ * @brief Copy the multiboot structure into the hypervisor and set up registers
+ *
+ * @param mb pointer to the multiboot context
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t multiboot_info_finalize(struct multiboot *mb);
+
 /* vim: set noexpandtab ts=4 : */ 

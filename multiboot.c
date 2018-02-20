@@ -132,6 +132,29 @@ multiboot_info_set_cmdline(struct multiboot_info* info, const char* cmdline)
     return error;
 }
 
+uint32_t
+multiboot_info_finalize(struct multiboot *mb)
+{
+    uint32_t error = 0;
+
+    void* p_addr = allocate(sizeof(struct multiboot_info));
+    if (!p_addr)
+        return ENOMEM;
+
+    error = CALLBACK(copyin, &mb->info, p_addr, sizeof(struct multiboot_info));
+    if (error)
+        return error;
+
+    /*
+     * Multiboot specification, section 3.2:
+     * EBX Must contain the 32-bit physical address of the Multiboot information
+     * structure provided by the boot loader (see spec, section 3.3).
+     */
+    error = CALLBACK(vm_set_register, 0, VM_REG_GUEST_RBX, p_addr);
+
+    return error;
+}
+
 struct multiboot*
 mb_scan(void *kernel, size_t kernsz)
 {

@@ -155,6 +155,10 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
         if (mb->header.mb.header->flags & MULTIBOOT_FLAG_GRAPHICS) {
             ERROR(ENOTSUP, "VBE info requested by kernel, but not supported.");
         }
+
+        if (multiboot_info_finalize(mb)) {
+            ERROR(ECANCELED, "Could not set up multiboot information structure");
+        }
     }
 
     /* Cleanup. */
