@@ -123,6 +123,8 @@ multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
         || (elf_kind(*kernel_elf) != ELF_K_ELF))
     {
         /* Not an ELF. Try loading it as an a.out. */
+        elf_end(*kernel_elf);
+        *kernel_elf = NULL;
         return LOAD_AOUT;
     }
 
@@ -322,13 +324,18 @@ uint32_t
 multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb)
 {
     Elf *kernel_elf = NULL;
+    uint32_t error = 0;
 
     switch (multiboot_load_type(kernel, kernsz, &kernel_elf, mb)) {
         case LOAD_AOUT:
-            return multiboot_load_aout(kernel, kernsz, mb);
+            error = multiboot_load_aout(kernel, kernsz, mb);
+            return error;
 
         case LOAD_ELF:
-            return multiboot_load_elf(kernel, kernsz, kernel_elf);
+            error = multiboot_load_elf(kernel, kernsz, kernel_elf);
+            if (kernel_elf)
+                elf_end(kernel_elf);
+            return error;
     }
 }
 
