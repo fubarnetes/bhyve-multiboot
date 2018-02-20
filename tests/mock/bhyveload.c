@@ -773,7 +773,7 @@ cb_setgdt(void *arg, uint64_t base, size_t size)
     }
 }
 
-struct loader_callbacks callbacks = {
+struct loader_callbacks mock_callbacks = {
     .getc = cb_getc,
     .putc = cb_putc,
     .poll = cb_poll,

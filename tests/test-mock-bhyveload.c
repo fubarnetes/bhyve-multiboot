@@ -58,7 +58,7 @@ ATF_TC_BODY(mock_exit, tc)
 {
     ATF_CHECK_EQ_MSG(exited, 0, "should not have exited yet.");
     ATF_CHECK_EQ_MSG(exit_reason, 0, "exit_reason should not be set");
-    callbacks.exit(callbacks_arg, EINVAL);
+    mock_callbacks.exit(callbacks_arg, EINVAL);
     ATF_CHECK_EQ_MSG(exited, 1, "should have exited.");
     ATF_CHECK_EQ_MSG(exit_reason, EINVAL, "exit_reason should be EINVAL");
 }
@@ -75,7 +75,7 @@ ATF_TC_BODY(mock_getenv, tc)
     addenv("smbios.bios.vendor=BHYVE");
     addenv("boot_serial=1");
 
-    while ( (var = callbacks.getenv(callbacks_arg, i++)) ) {
+    while ( (var = mock_callbacks.getenv(callbacks_arg, i++)) ) {
         switch(i) {
         case 1:
             ATF_CHECK_STREQ("boot_serial=1", var);
@@ -112,19 +112,20 @@ ATF_TC_BODY(mock_lowmemio, tc)
     ATF_CHECK_EQ(0, highmem_buffer == 0);
     ATF_CHECK_EQ(0, lowmem_buffer == 0);
 
-    callbacks.getmem(callbacks_arg, &lowmem, &highmem);
+    mock_callbacks.getmem(callbacks_arg, &lowmem, &highmem);
 
     ATF_CHECK_EQ(256 * kiB, lowmem);
     ATF_CHECK_EQ(4 * kiB, highmem);
 
-    retv = callbacks.copyin(callbacks_arg, testdata_lowmem,
-                            lowmem_test_address, strlen(testdata_lowmem)+1);
+    retv = mock_callbacks.copyin(callbacks_arg, testdata_lowmem,
+                                 lowmem_test_address,
+                                 strlen(testdata_lowmem)+1);
 
     ATF_CHECK_EQ_MSG(0, retv, "lowmem copyin failed");
 
     ATF_CHECK_STREQ(testdata_lowmem, lowmem_buffer + 128 * kiB);
 
-    retv = callbacks.copyout(callbacks_arg, lowmem_test_address, outbuf,
+    retv = mock_callbacks.copyout(callbacks_arg, lowmem_test_address, outbuf,
                                 strlen(testdata_lowmem)+1);
 
     ATF_CHECK_STREQ(testdata_lowmem, outbuf);
@@ -154,12 +155,12 @@ ATF_TC_BODY(mock_highmemio, tc)
     ATF_CHECK_EQ(0, highmem_buffer == 0);
     ATF_CHECK_EQ(0, lowmem_buffer == 0);
 
-    callbacks.getmem(callbacks_arg, &lowmem, &highmem);
+    mock_callbacks.getmem(callbacks_arg, &lowmem, &highmem);
 
     ATF_CHECK_EQ(4 * kiB, lowmem);
     ATF_CHECK_EQ(256 * kiB, highmem);
 
-    retv = callbacks.copyin(callbacks_arg, testdata_highmem,
+    retv = mock_callbacks.copyin(callbacks_arg, testdata_highmem,
                             highmem_test_address, strlen(testdata_highmem)+1);
 
     ATF_CHECK_EQ_MSG(0, retv, "highmem copyin failed");
@@ -202,13 +203,14 @@ ATF_TC_BODY(mock_hostfileio, tc)
     mkfile("testdirectory/bbbb", "", 0);
     mkfile("testdirectory/ccccc", "", 0);
 
-    retv = callbacks.open(callbacks_arg, "/testfile", &filehandle);
+    retv = mock_callbacks.open(callbacks_arg, "/testfile", &filehandle);
     ATF_CHECK_EQ_MSG(0, retv, "open failed");
 
-    retv = callbacks.isdir(callbacks_arg, filehandle);
+    retv = mock_callbacks.isdir(callbacks_arg, filehandle);
     ATF_CHECK_EQ_MSG(0, retv, "isdir failed");
 
-    retv = callbacks.stat(callbacks_arg, filehandle, &mode, &uid, &gid, &size);
+    retv = mock_callbacks.stat(callbacks_arg, filehandle,
+                               &mode, &uid, &gid, &size);
     ATF_CHECK_EQ_MSG(0, retv, "stat failed");
     ATF_CHECK_EQ(strlen(testdata), size);
 
@@ -216,7 +218,7 @@ ATF_TC_BODY(mock_hostfileio, tc)
     if (!buffer)
             atf_tc_fail("could not allocate memory");
 
-    retv = callbacks.read(callbacks_arg, filehandle, buffer, size, &resid);
+    retv = mock_callbacks.read(callbacks_arg, filehandle, buffer, size, &resid);
     ATF_CHECK_EQ_MSG(0, retv, "read failed");
     ATF_CHECK_STREQ(testdata, buffer);
 
@@ -227,32 +229,32 @@ ATF_TC_BODY(mock_hostfileio, tc)
     if (!buffer)
             atf_tc_fail("could not allocate memory");
 
-    retv = callbacks.seek(callbacks_arg, filehandle, 5, SEEK_SET);
+    retv = mock_callbacks.seek(callbacks_arg, filehandle, 5, SEEK_SET);
     ATF_CHECK_EQ_MSG(0, retv, "seek failed");
 
-    retv = callbacks.read(callbacks_arg, filehandle, buffer, size, &resid);
+    retv = mock_callbacks.read(callbacks_arg, filehandle, buffer, size, &resid);
     ATF_CHECK_EQ_MSG(0, retv, "read failed");
     ATF_CHECK_STREQ(testdata+5, buffer);
 
     if (buffer)
         free(buffer);
 
-    retv = callbacks.close(callbacks_arg, filehandle);
+    retv = mock_callbacks.close(callbacks_arg, filehandle);
     ATF_CHECK_EQ_MSG(0, retv, "close failed");
 
-    retv = callbacks.open(callbacks_arg, "/testdirectory", &dirhandle);
+    retv = mock_callbacks.open(callbacks_arg, "/testdirectory", &dirhandle);
     ATF_CHECK_EQ_MSG(0, retv, "open failed");
 
-    retv = callbacks.isdir(callbacks_arg, dirhandle);
+    retv = mock_callbacks.isdir(callbacks_arg, dirhandle);
     ATF_CHECK_EQ_MSG(1, retv, "isdir failed");
 
-    retv = callbacks.seek(callbacks_arg, dirhandle, 5, SEEK_SET);
+    retv = mock_callbacks.seek(callbacks_arg, dirhandle, 5, SEEK_SET);
     ATF_CHECK_EQ(EINVAL, retv);
 
-    retv = callbacks.read(callbacks_arg, dirhandle, NULL, size, &resid);
+    retv = mock_callbacks.read(callbacks_arg, dirhandle, NULL, size, &resid);
     ATF_CHECK_EQ_MSG(EINVAL, retv, "read failed");
 
-    while (!(retv = callbacks.readdir(callbacks_arg, dirhandle, &fileno,
+    while (!(retv = mock_callbacks.readdir(callbacks_arg, dirhandle, &fileno,
                                     &type, &namelen, name)))
     {
         switch(namelen) {
@@ -276,19 +278,9 @@ ATF_TC_BODY(mock_hostfileio, tc)
         }
     }
 
-    retv = callbacks.close(callbacks_arg, filehandle);
+    retv = mock_callbacks.close(callbacks_arg, filehandle);
     ATF_CHECK_EQ_MSG(0, retv, "close failed");
 }
-
-#define TESTCASE_NOTIMPLEMENTED(fcn, args...) \
-    ATF_TC(mock_ ## fcn); \
-    ATF_TC_HEAD(mock_ ## fcn, tc) \
-    { atf_tc_set_md_var(tc, "descr", "Test that " #fcn "isn't implemented"); } \
-    ATF_TC_BODY(mock_ ## fcn, tc) { \
-        (&callbacks)->fcn(callbacks_arg , ##args); \
-        ATF_CHECK_EQ_MSG(exited, 1, "should have exited."); \
-        ATF_CHECK_EQ_MSG(exit_reason, ENOSYS, "exit_reason should be ENOSYS"); \
-    }
 
 ATF_TC(mock_vmmapi);
 ATF_TC_HEAD(mock_vmmapi, tc)
@@ -306,7 +298,8 @@ ATF_TC_BODY(mock_vmmapi, tc)
     ATF_CHECK_EQ_MSG(0xfff0, rip,
                         "rip not initialized correctly after cpu reset");
 
-    callbacks.vm_set_register(callbacks_arg, 0, VM_REG_GUEST_RIP, 0xDEADBEEF);
+    mock_callbacks.vm_set_register(callbacks_arg, 0, VM_REG_GUEST_RIP,
+                                   0xDEADBEEF);
     rip = 0;
     vm_get_register(&ctx, 0, VM_REG_GUEST_RIP, &rip);
 
@@ -319,8 +312,8 @@ ATF_TC_BODY(mock_vmmapi, tc)
     ATF_CHECK_EQ(0x0093, access);
 
     base = limit = access = 0;
-    callbacks.vm_set_desc(callbacks_arg, 0, VM_REG_GUEST_CS,
-                            0xaaaa0000, 0xcccc, 0x92);
+    mock_callbacks.vm_set_desc(callbacks_arg, 0, VM_REG_GUEST_CS,
+                               0xaaaa0000, 0xcccc, 0x92);
 
     vm_get_desc(&ctx, 0, VM_REG_GUEST_CS, &base, &limit, &access);
     ATF_CHECK_EQ(0xaaaa0000, base);
@@ -340,14 +333,14 @@ ATF_TC_BODY(mock_setreg, tc)
     uint64_t actual;
 
     /* Can only set RSP */
-    callbacks.setreg(callbacks_arg, 4, 0xdeadbeef);
+    mock_callbacks.setreg(callbacks_arg, 4, 0xdeadbeef);
     ATF_CHECK_EQ_MSG(0, exited, "setreg failed for RSP");
 
     error = vm_get_register(&ctx, 0, VM_REG_GUEST_RSP, &actual);
     ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
     ATF_CHECK_EQ_MSG(0xdeadbeef, actual, "wrong RSP value");
 
-    callbacks.setreg(callbacks_arg, 5, 0xdeadc0de);
+    mock_callbacks.setreg(callbacks_arg, 5, 0xdeadc0de);
     ATF_CHECK_EQ_MSG(1, exited, "setreg succeeded");
 }
 
@@ -363,14 +356,14 @@ ATF_TC_BODY(mock_setmsr, tc)
     uint64_t actual;
 
     /* Can only set EFER */
-    callbacks.setmsr(callbacks_arg, MSR_EFER, 0xdeadbeef);
+    mock_callbacks.setmsr(callbacks_arg, MSR_EFER, 0xdeadbeef);
     ATF_CHECK_EQ_MSG(0, exited, "setmsr failed for EFER");
 
     error = vm_get_register(&ctx, 0, VM_REG_GUEST_EFER, &actual);
     ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
     ATF_CHECK_EQ_MSG(0xdeadbeef, actual, "wrong EFER value");
 
-    callbacks.setmsr(callbacks_arg, 0, 0xdeadc0d3);
+    mock_callbacks.setmsr(callbacks_arg, 0, 0xdeadc0d3);
     ATF_CHECK_EQ_MSG(1, exited, "setmsr succeeded");
 }
 
@@ -386,28 +379,28 @@ ATF_TC_BODY(mock_setcr, tc)
     uint64_t actual;
 
     /* Can only set CR0, CR3, CR4 */
-    callbacks.setcr(callbacks_arg, 0, 0xdeadbeef);
+    mock_callbacks.setcr(callbacks_arg, 0, 0xdeadbeef);
     ATF_CHECK_EQ_MSG(0, exited, "setcr failed for CR0");
 
     error = vm_get_register(&ctx, 0, VM_REG_GUEST_CR0, &actual);
     ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
     ATF_CHECK_EQ_MSG(0xdeadbeef, actual, "wrong CR0 value");
 
-    callbacks.setcr(callbacks_arg, 3, 0xdeadbeef);
+    mock_callbacks.setcr(callbacks_arg, 3, 0xdeadbeef);
     ATF_CHECK_EQ_MSG(0, exited, "setcr failed for CR3");
 
     error = vm_get_register(&ctx, 0, VM_REG_GUEST_CR3, &actual);
     ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
     ATF_CHECK_EQ_MSG(0xdeadbeef, actual, "wrong CR3 value");
 
-    callbacks.setcr(callbacks_arg, 4, 0xdeadbeef);
+    mock_callbacks.setcr(callbacks_arg, 4, 0xdeadbeef);
     ATF_CHECK_EQ_MSG(0, exited, "setcr failed for CR4");
 
     error = vm_get_register(&ctx, 0, VM_REG_GUEST_CR4, &actual);
     ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
     ATF_CHECK_EQ_MSG(0xdeadbeef, actual, "wrong CR4 value");
 
-    callbacks.setcr(callbacks_arg, 1, 0xdeadc0d3);
+    mock_callbacks.setcr(callbacks_arg, 1, 0xdeadc0d3);
     ATF_CHECK_EQ_MSG(1, exited, "setcr succeeded");
 }
 
@@ -424,7 +417,7 @@ ATF_TC_BODY(mock_setgdt, tc)
     uint32_t actual_size;
     uint32_t actual_access;
 
-    callbacks.setgdt(callbacks_arg, 0xdeadbeef, 0x1337);
+    mock_callbacks.setgdt(callbacks_arg, 0xdeadbeef, 0x1337);
     ATF_CHECK_EQ_MSG(0, exited, "setgdt failed");
 
     error = vm_get_desc(&ctx, 0, VM_REG_GUEST_GDTR,
@@ -434,6 +427,16 @@ ATF_TC_BODY(mock_setgdt, tc)
     ATF_CHECK_EQ_MSG(0x1336, actual_size, "wrong size");
     ATF_CHECK_EQ_MSG(0, actual_access, "wrong access");
 }
+
+#define TESTCASE_NOTIMPLEMENTED(fcn, args...) \
+    ATF_TC(mock_ ## fcn); \
+    ATF_TC_HEAD(mock_ ## fcn, tc) \
+    { atf_tc_set_md_var(tc, "descr", "Test that " #fcn "isn't implemented"); } \
+    ATF_TC_BODY(mock_ ## fcn, tc) { \
+        (&mock_callbacks)->fcn(callbacks_arg , ##args); \
+        ATF_CHECK_EQ_MSG(exited, 1, "should have exited."); \
+        ATF_CHECK_EQ_MSG(exit_reason, ENOSYS, "exit_reason should be ENOSYS"); \
+    }
 
 TESTCASE_NOTIMPLEMENTED(getc);
 TESTCASE_NOTIMPLEMENTED(putc, 'a');

@@ -8,7 +8,7 @@ extern int exit_reason;
 extern void* highmem_buffer;
 extern void* lowmem_buffer;
 
-extern struct loader_callbacks callbacks;
+extern struct loader_callbacks mock_callbacks;
 
 void addenv(const char *str);
 void setmem(size_t lowmem, size_t highmem);
