@@ -104,6 +104,7 @@ mb_scan(void *kernel, size_t kernsz)
         return mb;
     }
 
+    free(mb);
     return NULL;
 }
 
