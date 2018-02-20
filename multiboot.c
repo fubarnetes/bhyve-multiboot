@@ -53,6 +53,22 @@ multiboot_info_set_meminfo(struct multiboot_info* info,
 }
 
 uint32_t
+multiboot_info_set_loader_name(struct multiboot_info* info, const char* name)
+{
+    uint32_t error = 0;
+    size_t length = strlen(name);
+    void* p_addr = allocate(length+1);
+
+    if (!p_addr)
+        return ENOMEM;
+
+    error = CALLBACK(copyin, name, p_addr, length+1);
+    info->boot_loader_name = p_addr;
+    info->flags |= MULTIBOOT_BOOTLOADER_NAME;
+    return error;
+}
+
+uint32_t
 multiboot_info_set_cmdline(struct multiboot_info* info, const char* cmdline)
 {
     uint32_t error = 0;

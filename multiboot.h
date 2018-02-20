@@ -234,6 +234,16 @@ multiboot_info_set_meminfo(struct multiboot_info* info,
                            uint32_t mem_lower, uint32_t mem_upper);
 
 /**
+ * @brief Set multiboot info bootloader name
+ *
+ * @param info pointer to the multiboot_info struct
+ * @param name bootloader name to set
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t
+multiboot_info_set_loader_name(struct multiboot_info* info, const char* name);
+
+/**
  * @brief Set multiboot info command line
  *
  * @param info pointer to the multiboot_info struct

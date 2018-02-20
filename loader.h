@@ -34,6 +34,8 @@
 #define USERBOOT_VERSION 4
 #define MALLOCSZ	(64*1024*1024)
 
+#define BOOTLOADER_NAME "bhyve-multiboot.so"
+
 enum LOAD_TYPE {
 	LOAD_ELF = 1,
 	LOAD_AOUT = 2,

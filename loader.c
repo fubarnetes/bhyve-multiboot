@@ -141,6 +141,11 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
             ERROR(EINVAL, "Could not set kernel command line");
             goto error;
         }
+
+        if (multiboot_info_set_loader_name(&mb->info, BOOTLOADER_NAME)) {
+            ERROR(EINVAL, "Could not set bootloader name");
+            goto error;
+        }
     }
 
     /* Cleanup. */
