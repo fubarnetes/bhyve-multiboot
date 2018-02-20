@@ -146,6 +146,10 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
             ERROR(EINVAL, "Could not set bootloader name");
             goto error;
         }
+
+        if (mb->header.mb.header->flags & MULTIBOOT_FLAG_GRAPHICS) {
+            ERROR(ENOTSUP, "VBE info requested by kernel, but not supported.");
+        }
     }
 
     /* Cleanup. */
