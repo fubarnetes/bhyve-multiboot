@@ -333,6 +333,76 @@ ATF_TC_BODY(load_elf, tc)
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_elf failed");
 }
 
+ATF_TC(sizeof_multiboot_info);
+ATF_TC_HEAD(sizeof_multiboot_info, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Check multiboot info size");
+}
+ATF_TC_BODY(sizeof_multiboot_info, tc)
+{
+    ATF_CHECK_EQ(0, offsetof(struct multiboot_info, flags));
+    ATF_CHECK_EQ(4, offsetof(struct multiboot_info, mem_lower));
+    ATF_CHECK_EQ(8, offsetof(struct multiboot_info, mem_upper));
+    ATF_CHECK_EQ(12, offsetof(struct multiboot_info, boot_device));
+    ATF_CHECK_EQ(16, offsetof(struct multiboot_info, cmdline));
+    ATF_CHECK_EQ(20, offsetof(struct multiboot_info, mods_count));
+    ATF_CHECK_EQ(24, offsetof(struct multiboot_info, mods_addr));
+    ATF_CHECK_EQ(28, offsetof(struct multiboot_info, syms));
+    ATF_CHECK_EQ(28, offsetof(struct multiboot_info, syms.aout));
+    ATF_CHECK_EQ(28, offsetof(struct multiboot_info, syms.aout.tabsize));
+    ATF_CHECK_EQ(32, offsetof(struct multiboot_info, syms.aout.strsize));
+    ATF_CHECK_EQ(36, offsetof(struct multiboot_info, syms.aout.addr));
+    ATF_CHECK_EQ(40, offsetof(struct multiboot_info, syms.aout.reserved));
+    ATF_CHECK_EQ(28, offsetof(struct multiboot_info, syms.elf));
+    ATF_CHECK_EQ(28, offsetof(struct multiboot_info, syms.elf.num));
+    ATF_CHECK_EQ(32, offsetof(struct multiboot_info, syms.elf.size));
+    ATF_CHECK_EQ(36, offsetof(struct multiboot_info, syms.elf.addr));
+    ATF_CHECK_EQ(40, offsetof(struct multiboot_info, syms.elf.shndx));
+    ATF_CHECK_EQ(44, offsetof(struct multiboot_info, mmap_length));
+    ATF_CHECK_EQ(48, offsetof(struct multiboot_info, mmap_addr));
+    ATF_CHECK_EQ(52, offsetof(struct multiboot_info, drives_length));
+    ATF_CHECK_EQ(56, offsetof(struct multiboot_info, drives_addr));
+    ATF_CHECK_EQ(60, offsetof(struct multiboot_info, config_table));
+    ATF_CHECK_EQ(64, offsetof(struct multiboot_info, boot_loader_name));
+    ATF_CHECK_EQ(68, offsetof(struct multiboot_info, apm_table));
+    ATF_CHECK_EQ(72, offsetof(struct multiboot_info, vbe));
+    ATF_CHECK_EQ(72, offsetof(struct multiboot_info, vbe.control_info));
+    ATF_CHECK_EQ(76, offsetof(struct multiboot_info, vbe.mode_info));
+    ATF_CHECK_EQ(80, offsetof(struct multiboot_info, vbe.mode));
+    ATF_CHECK_EQ(82, offsetof(struct multiboot_info, vbe.interface_seg));
+    ATF_CHECK_EQ(84, offsetof(struct multiboot_info, vbe.interface_off));
+    ATF_CHECK_EQ(86, offsetof(struct multiboot_info, vbe.interface_len));
+    ATF_CHECK_EQ(88, offsetof(struct multiboot_info, framebuffer));
+    ATF_CHECK_EQ(88, offsetof(struct multiboot_info, framebuffer.addr));
+    ATF_CHECK_EQ(96, offsetof(struct multiboot_info, framebuffer.pitch));
+    ATF_CHECK_EQ(100, offsetof(struct multiboot_info, framebuffer.width));
+    ATF_CHECK_EQ(104, offsetof(struct multiboot_info, framebuffer.height));
+    ATF_CHECK_EQ(108, offsetof(struct multiboot_info, framebuffer.bpp));
+    ATF_CHECK_EQ(109, offsetof(struct multiboot_info, framebuffer.type));
+    ATF_CHECK_EQ(110, offsetof(struct multiboot_info, framebuffer.color_info));
+    ATF_CHECK_EQ(110, offsetof(struct multiboot_info,
+                               framebuffer.color_info.palette.addr));
+    ATF_CHECK_EQ(114, offsetof(struct multiboot_info,
+                               framebuffer.color_info.palette.num_colors));
+    ATF_CHECK_EQ(110, offsetof(struct multiboot_info,
+                               framebuffer.color_info.rgb.red_field_position));
+    ATF_CHECK_EQ(111, offsetof(struct multiboot_info,
+                               framebuffer.color_info.rgb.red_mask_size));
+    ATF_CHECK_EQ(112, offsetof(struct multiboot_info,
+                               framebuffer.color_info.rgb.green_field_position));
+    ATF_CHECK_EQ(113, offsetof(struct multiboot_info,
+                               framebuffer.color_info.rgb.green_mask_size));
+    ATF_CHECK_EQ(114, offsetof(struct multiboot_info,
+                               framebuffer.color_info.rgb.blue_field_position));
+    ATF_CHECK_EQ(115, offsetof(struct multiboot_info,
+                               framebuffer.color_info.rgb.blue_mask_size));
+
+    ATF_CHECK_EQ_MSG(116, sizeof(struct multiboot_info),
+                     "struct multiboot_info should be %d bytes long, but it is "
+                     "actually %d bytes long",
+                     116, sizeof(struct multiboot_info));
+
+}
 
 ATF_TP_ADD_TCS(tp)
 {
@@ -343,6 +413,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, load_aout);
     ATF_TP_ADD_TC(tp, load_elf_direct);
     ATF_TP_ADD_TC(tp, load_elf);
+    ATF_TP_ADD_TC(tp, sizeof_multiboot_info);
 
     return atf_no_error();
 }

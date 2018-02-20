@@ -40,6 +40,24 @@
 #define MULTIBOOT_FLAG_MEMORY (1<<1)
 #define MULTIBOOT_FLAG_ALIGN4k (1<<0)
 
+#define MULTIBOOT_FRAMEBUFFER (1<<12)
+#define MULTIBOOT_VBE (1<<11)
+#define MULTIBOOT_APM_TABLE (1<<10)
+#define MULTIBOOT_BOOTLOADER_NAME (1<<9)
+#define MULTIBOOT_CONFIG_TABLE (1<<8)
+#define MULTIBOOT_DRIVES (1<<7)
+#define MULTIBOOT_MMAP (1<<6)
+#define MULTIBOOT_SYMS_ELF (1<<5)
+#define MULTIBOOT_SYMS_AOUT (1<<4)
+#define MULTIBOOT_MODS (1<<3)
+#define MULTIBOOT_CMDLINE (1<<2)
+#define MULTIBOOT_BOOTDEVICE (1<<1)
+#define MULTIBOOT_MEMINFO (1<<0)
+
+#define MULTIBOOT_FRAMEBUFFER_TYPE_INDEXED 0
+#define MULTIBOOT_FRAMEBUFFER_TYPE_RGB 1
+#define MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT 2
+
 #define PACKED __attribute__((packed))
 
 struct multiboot_header {
@@ -55,6 +73,67 @@ struct multiboot_header {
     uint32_t width;
     uint32_t height;
     uint32_t depth;
+} PACKED;
+
+struct multiboot_info {
+    uint32_t flags;
+    uint32_t mem_lower;
+    uint32_t mem_upper;
+    uint32_t boot_device;
+    uint32_t cmdline;
+    uint32_t mods_count;
+    uint32_t mods_addr;
+    union {
+        struct {
+            uint32_t num;
+            uint32_t size;
+            uint32_t addr;
+            uint32_t shndx;
+        } PACKED elf;
+        struct {
+            uint32_t tabsize;
+            uint32_t strsize;
+            uint32_t addr;
+            uint32_t reserved;
+        } PACKED aout;
+    } syms;
+    uint32_t mmap_length;
+    uint32_t mmap_addr;
+    uint32_t drives_length;
+    uint32_t drives_addr;
+    uint32_t config_table;
+    uint32_t boot_loader_name;
+    uint32_t apm_table;
+    struct {
+        uint32_t control_info;
+        uint32_t mode_info;
+        uint16_t mode;
+        uint16_t interface_seg;
+        uint16_t interface_off;
+        uint16_t interface_len;
+    } PACKED vbe;
+    struct {
+        uint64_t addr;
+        uint32_t pitch;
+        uint32_t width;
+        uint32_t height;
+        uint8_t bpp;
+        uint8_t type;
+        union {
+            struct {
+                uint32_t addr;
+                uint16_t num_colors;
+            } PACKED palette;
+            struct {
+                uint8_t red_field_position;
+                uint8_t red_mask_size;
+                uint8_t green_field_position;
+                uint8_t green_mask_size;
+                uint8_t blue_field_position;
+                uint8_t blue_mask_size;
+            } PACKED rgb;
+        } color_info;
+    } PACKED framebuffer;
 } PACKED;
 
 struct multiboot2_header {
@@ -80,6 +159,7 @@ struct multiboot {
             struct multiboot2_header* header;
         } mb2;
     } header;
+    struct multiboot_info info;
 };
 
 /**

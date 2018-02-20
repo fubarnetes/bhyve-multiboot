@@ -44,7 +44,7 @@ void *entry = NULL;
 struct multiboot*
 mb_scan(void *kernel, size_t kernsz)
 {
-    struct multiboot *mb = malloc(sizeof(struct multiboot));
+    struct multiboot *mb = calloc(1, sizeof(struct multiboot));
     uint32_t* magic = NULL;
 
     printf("Scanning for multiboot header...\r\n");
