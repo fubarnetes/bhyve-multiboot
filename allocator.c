@@ -27,6 +27,7 @@
 
 #include <allocator.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sys/queue.h>
 
 #define likely(x)      __builtin_expect(!!(x), 1)
