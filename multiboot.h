@@ -32,7 +32,7 @@
 #include <libelf.h>
 
 #define MULTIBOOT1_MAGIC 0x1BADB002
-#define MULTIBOOT1_BOOTLOADER_MAGICC 0x2BADB002
+#define MULTIBOOT1_BOOTLOADER_MAGIC 0x2BADB002
 #define MULTIBOOT2_MAGIC 0xE85250D6
 
 #define MULTIBOOT_AOUT_KLUDGE (1<<16)
@@ -174,6 +174,8 @@ struct multiboot {
             struct multiboot2_header* header;
         } mb2;
     } header;
+    void* entry;
+    Elf *kernel_elf;
     struct multiboot_info info;
 };
 
@@ -194,14 +196,11 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz);
  *
  * @param kernel     pointer to the kernel
  * @param kernsz     size of the kernel
- * @param kernel_elf pointer to the ELF object to initialize if loading as an
- *                   ELF.
  * @param mb         pointer to the multiboot context
  * @return enum LOAD_TYPE
  */
 enum LOAD_TYPE
-multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
-                     struct multiboot *mb);
+multiboot_load_type (void* kernel, size_t kernsz, struct multiboot *mb);
 
 /**
  * @brief Attempt to load a file as an a.out object.
@@ -219,11 +218,11 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot *mb);
  *
  * @param kernel pointer to the kernel
  * @param kernsz size of the kernel
- * @param kernel_elf kernel ELF object
+ * @param mb        pointer to the multiboot context
  * @return uint32_t 0 on success, error code on failure.
  */
 uint32_t
-multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf);
+multiboot_load_elf(void *kernel, size_t kernsz, struct multiboot *mb);
 
 /**
  * @brief Load a kernel into guest memory.

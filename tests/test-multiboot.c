@@ -158,16 +158,15 @@ ATF_TC_BODY(loadtype, tc)
     void *kernel = MB_TESTDATA_START(mmap);
     size_t kernsz = MB_TESTDATA_SIZE(mmap);
     enum LOAD_TYPE type;
-    Elf *kernelf;
 
     mb = mb_scan(kernel, kernsz);
 
-    type = multiboot_load_type(kernel, kernsz, &kernelf, mb);
+    type = multiboot_load_type(kernel, kernsz, mb);
     ATF_CHECK_EQ_MSG(type, LOAD_ELF, "mmap test kernel not loaded as ELF");
 
     ATF_CHECK(urandom = fopen("/dev/urandom", "r"));
     ATF_CHECK_MSG(random_buffer = malloc(128*kiB), "could not allocate memory");
-    elf_end(kernelf);
+    elf_end(mb->kernel_elf);
 
     /* Craft a valid multiboot header */
     ATF_CHECK(fread(random_buffer, 128*kiB, 1, urandom));
@@ -179,11 +178,9 @@ ATF_TC_BODY(loadtype, tc)
     ATF_CHECK_EQ_MSG(mb->header.mb.header, mbh,
                      "did not find crafted valid header");
     mbh = NULL;
-    type = multiboot_load_type(random_buffer, 128*kiB,
-                               &kernelf, mb);
+    type = multiboot_load_type(random_buffer, 128*kiB, mb);
     ATF_CHECK_EQ_MSG(type, LOAD_AOUT,
                      "random test data not loaded as a.out kludge");
-    ATF_CHECK_EQ_MSG(NULL, kernelf, "ELF resources not freed");
 
     free(random_buffer);
     fclose(urandom);
@@ -293,7 +290,6 @@ ATF_TC_BODY(load_elf_direct, tc)
     size_t highmem = 0;
     void *kernel = MB_TESTDATA_START(mmap);
     size_t kernsz = MB_TESTDATA_SIZE(mmap);
-    Elf *kernelf;
 
     setmem(4*MiB, 0);
     callbacks->getmem(callbacks_arg, &lowmem, &highmem);
@@ -301,11 +297,11 @@ ATF_TC_BODY(load_elf_direct, tc)
 
     mb = mb_scan(kernel, kernsz);
     mbh = mb->header.mb.header;
-    multiboot_load_type(kernel, kernsz, &kernelf, mb);
-    error = multiboot_load_elf(kernel, kernsz, kernelf);
+    multiboot_load_type(kernel, kernsz, mb);
+    error = multiboot_load_elf(kernel, kernsz, mb);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_elf failed");
 
-    elf_end(kernelf);
+    elf_end(mb->kernel_elf);
 }
 
 ATF_TC(load_elf);

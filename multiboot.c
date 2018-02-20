@@ -40,8 +40,6 @@
 
 #include <allocator.h>
 
-void *entry = NULL;
-
 uint32_t
 multiboot_info_set_meminfo(struct multiboot_info* info,
                            uint32_t mem_lower, uint32_t mem_upper)
@@ -223,8 +221,7 @@ mb_scan(void *kernel, size_t kernsz)
 }
 
 enum LOAD_TYPE
-multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
-                     struct multiboot *mb)
+multiboot_load_type (void* kernel, size_t kernsz, struct multiboot *mb)
 {
     struct multiboot_header *mbh = mb->header.mb.header;
 
@@ -235,12 +232,12 @@ multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
     }
 
     /* Check if the file is an ELF */
-    if (((*kernel_elf = elf_memory(kernel, kernsz)) == NULL)
-        || (elf_kind(*kernel_elf) != ELF_K_ELF))
+    if (((mb->kernel_elf = elf_memory(kernel, kernsz)) == NULL)
+        || (elf_kind(mb->kernel_elf) != ELF_K_ELF))
     {
         /* Not an ELF. Try loading it as an a.out. */
-        elf_end(*kernel_elf);
-        *kernel_elf = NULL;
+        elf_end(mb->kernel_elf);
+        mb->kernel_elf = NULL;
         return LOAD_AOUT;
     }
 
@@ -344,26 +341,26 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot *mb)
          */
     }
 
-    entry = (void*) (uintptr_t) mbh->entry_addr;
+    mb->entry = (void*) (uintptr_t) mbh->entry_addr;
 
     return 0;
 }
 
 uint32_t
-multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf) {
+multiboot_load_elf(void *kernel, size_t kernsz, struct multiboot *mb) {
     size_t elf_phnum = 0;
     int elf_phidx = 0;
     GElf_Ehdr elf_ehdr;
     GElf_Phdr elf_phdr;
 
     /* Get the elf Ehdr */
-    if (!gelf_getehdr(kernel_elf, &elf_ehdr)) {
+    if (!gelf_getehdr(mb->kernel_elf, &elf_ehdr)) {
         ERROR(EINVAL, "Could not get number of ELF headers");
         return EINVAL;
     }
 
     /* Get the number of ELF program headers. */
-    if (!elf_getphnum(kernel_elf, &elf_phnum)) {
+    if (!elf_getphnum(mb->kernel_elf, &elf_phnum)) {
         ERROR(EINVAL, "Could not get number of ELF program headers.");
         return EINVAL;
     }
@@ -382,7 +379,7 @@ multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf) {
     }
 
     for (elf_phidx = 0; elf_phidx < elf_phnum; elf_phidx++) {
-        gelf_getphdr(kernel_elf, elf_phidx, &elf_phdr);
+        gelf_getphdr(mb->kernel_elf, elf_phidx, &elf_phdr);
 
         if (elf_phdr.p_type != PT_LOAD)
             continue;
@@ -439,25 +436,24 @@ multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf) {
          */
     }
 
-    entry = (void*) elf_ehdr.e_entry;
+    mb->entry = (void*) elf_ehdr.e_entry;
     return 0;
 }
 
 uint32_t
 multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb)
 {
-    Elf *kernel_elf = NULL;
     uint32_t error = 0;
 
-    switch (multiboot_load_type(kernel, kernsz, &kernel_elf, mb)) {
+    switch (multiboot_load_type(kernel, kernsz, mb)) {
         case LOAD_AOUT:
             error = multiboot_load_aout(kernel, kernsz, mb);
             return error;
 
         case LOAD_ELF:
-            error = multiboot_load_elf(kernel, kernsz, kernel_elf);
-            if (kernel_elf)
-                elf_end(kernel_elf);
+            error = multiboot_load_elf(kernel, kernsz, mb);
+            if (mb->kernel_elf)
+                elf_end(mb->kernel_elf);
             return error;
     }
 }
