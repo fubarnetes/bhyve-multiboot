@@ -110,8 +110,10 @@ mb_scan(void *kernel, size_t kernsz)
 
 enum LOAD_TYPE
 multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
-                     struct multiboot_header *mb)
+                     struct multiboot *mb)
 {
+    struct multiboot_header *mbh = mb->header.mb.header;
+
     /* Initialize libelf */
     if (elf_version(EV_CURRENT) == EV_NONE) {
         ERROR(ENOTSUP, "Wrong libelf version.");
@@ -132,33 +134,35 @@ multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
      * This kernel is an ELF, but if it has address information set in the
      * multiboot header, try loading it as an a.out.
      */
-    if (mb->flags & MULTIBOOT_AOUT_KLUDGE)
+    if (mbh->flags & MULTIBOOT_AOUT_KLUDGE)
         return LOAD_AOUT;
 
     return LOAD_ELF;
 }
 
 uint32_t
-multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
+multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot *mb)
 {
+    struct multiboot_header *mbh = mb->header.mb.header;
     size_t offset = 0;
     size_t loadsz = 0;
     size_t bsssz = 0;
-    if (!(mb->flags & MULTIBOOT_AOUT_KLUDGE)) {
+
+    if (!(mbh->flags & MULTIBOOT_AOUT_KLUDGE)) {
         ERROR(ENOEXEC, "Kernel does not support a.out kludge");
         return ENOEXEC;
     }
 
     /* Implement a.out loader */
     printf("Using load addresses specified in Multiboot header:\r\n");
-    printf("  load @ 0x%08x - 0x%08x\r\n", mb->load_addr,
-            mb->load_end_addr);
-    printf("  bss @ 0x%08x - 0x%08x\r\n", mb->load_end_addr,
-            mb->bss_end_addr);
-    printf("  entry @ 0x%08x\r\n", mb->entry_addr);
+    printf("  load @ 0x%08x - 0x%08x\r\n", mbh->load_addr,
+            mbh->load_end_addr);
+    printf("  bss @ 0x%08x - 0x%08x\r\n", mbh->load_end_addr,
+            mbh->bss_end_addr);
+    printf("  entry @ 0x%08x\r\n", mbh->entry_addr);
 
     /* load_addr must be less than or equal to header_addr. */
-    if (mb->load_addr > mb->header_addr) {
+    if (mbh->load_addr > mbh->header_addr) {
         ERROR(EINVAL,
                 "Loader address must be less than or equal to header_addr.");
         return EINVAL;
@@ -168,21 +172,21 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
      * The offset in the OS image file at which to start loading is defined by
      * the offset at which the header was found, minus (header_addr - load_addr)
      */
-    offset = ((void*) mb - kernel) - (mb->header_addr - mb->load_addr);
+    offset = ((void*) mbh - kernel) - (mbh->header_addr - mbh->load_addr);
 
     /*
      * If load_end_addr is zero, assume that the text and data segments occupy
      * the whole OS image file.
      */
-    if (!mb->load_end_addr) {
+    if (!mbh->load_end_addr) {
         loadsz = (kernsz - offset);
     }
     else {
         /* (load_end_addr - load_addr) specifies how much data to load. */
-        loadsz = mb->load_end_addr - mb->load_addr;
+        loadsz = mbh->load_end_addr - mbh->load_addr;
     }
 
-    if (!allocate_at((void*) (uintptr_t) mb->load_addr, loadsz)) {
+    if (!allocate_at((void*) (uintptr_t) mbh->load_addr, loadsz)) {
         /*
          * Could not allocate memory for the text and data, something else is
          * there already!
@@ -193,21 +197,21 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
 
     CALLBACK(copyin,
             kernel+offset,
-            mb->load_addr,
+            mbh->load_addr,
             loadsz);
 
-    if (mb->bss_end_addr) {
+    if (mbh->bss_end_addr) {
         /*
          * Handle .bss sections.
          */
-        if (mb->bss_end_addr < mb->load_end_addr) {
+        if (mbh->bss_end_addr < mbh->load_end_addr) {
             ERROR(EINVAL, "bss_end_addr < mb->load_end_addr");
             return EINVAL;
         }
 
-        bsssz = mb->bss_end_addr - mb->load_end_addr;
+        bsssz = mbh->bss_end_addr - mbh->load_end_addr;
 
-        if (!allocate_at((void*) (uintptr_t) mb->load_end_addr, bsssz)) {
+        if (!allocate_at((void*) (uintptr_t) mbh->load_end_addr, bsssz)) {
             /*
              * Could not allocate memory for the bss, something else is
              * there already!
@@ -226,7 +230,7 @@ multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb)
          */
     }
 
-    entry = (void*) (uintptr_t) mb->entry_addr;
+    entry = (void*) (uintptr_t) mbh->entry_addr;
 
     return 0;
 }
@@ -326,7 +330,7 @@ multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf) {
 }
 
 uint32_t
-multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb)
+multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb)
 {
     Elf *kernel_elf = NULL;
     uint32_t error = 0;

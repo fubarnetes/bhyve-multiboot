@@ -169,6 +169,8 @@ struct multiboot {
  * bytes of the OS image, and must be longword (32-bit) aligned.
  * The Multiboot2 header must be contained completely within the first 32768
  * bytes of the OS image, and must be 64-bit aligned.
+ * 
+ * @return struct multiboot* pointer to a multiboot context
  */
 struct multiboot* mb_scan(void *kernel, size_t kernsz);
 
@@ -179,23 +181,23 @@ struct multiboot* mb_scan(void *kernel, size_t kernsz);
  * @param kernsz     size of the kernel
  * @param kernel_elf pointer to the ELF object to initialize if loading as an
  *                   ELF.
- * @param mb         pointer to the multiboot header
+ * @param mb         pointer to the multiboot context
  * @return enum LOAD_TYPE
  */
 enum LOAD_TYPE
 multiboot_load_type (void* kernel, size_t kernsz, Elf **kernel_elf,
-                     struct multiboot_header *mb);
+                     struct multiboot *mb);
 
 /**
  * @brief Attempt to load a file as an a.out object.
  *
  * @param kernel    pointer to the kernel
  * @param kernsz    size of the kernel
- * @param mb        pointer to the multiboot header
+ * @param mb        pointer to the multiboot context
  * @return uint32_t 0 on success, error code on failure
  */
 uint32_t
-multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot_header *mb);
+multiboot_load_aout(void* kernel, size_t kernsz, struct multiboot *mb);
 
 /**
  * @brief Load an ELF object.
@@ -213,10 +215,10 @@ multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf);
  * 
  * @param kernel pointer to the kernel buffer
  * @param kernsz size of the kernel buffer
- * @param mb pointer to the multiboot header
+ * @param mb pointer to the multiboot context
  * @return uint32_t 0 on success, error code on failure.
  */
 uint32_t
-multiboot_load(void* kernel, size_t kernsz, struct multiboot_header *mb);
+multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb);
 
 /* vim: set noexpandtab ts=4 : */ 

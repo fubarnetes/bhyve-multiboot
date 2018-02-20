@@ -162,7 +162,7 @@ ATF_TC_BODY(loadtype, tc)
 
     mb = mb_scan(kernel, kernsz);
 
-    type = multiboot_load_type(kernel, kernsz, &kernelf, mb->header.mb.header);
+    type = multiboot_load_type(kernel, kernsz, &kernelf, mb);
     ATF_CHECK_EQ_MSG(type, LOAD_ELF, "mmap test kernel not loaded as ELF");
 
     ATF_CHECK(urandom = fopen("/dev/urandom", "r"));
@@ -180,7 +180,7 @@ ATF_TC_BODY(loadtype, tc)
                      "did not find crafted valid header");
     mbh = NULL;
     type = multiboot_load_type(random_buffer, 128*kiB,
-                               &kernelf, mb->header.mb.header);
+                               &kernelf, mb);
     ATF_CHECK_EQ_MSG(type, LOAD_AOUT,
                      "random test data not loaded as a.out kludge");
     ATF_CHECK_EQ_MSG(NULL, kernelf, "ELF resources not freed");
@@ -224,13 +224,13 @@ ATF_TC_BODY(load_aout_direct, tc)
     mbh->entry_addr = 1*MiB + sizeof(struct multiboot_header);
 
     mb = mb_scan(random_buffer, 128*kiB);
-    error = multiboot_load_aout(random_buffer, 128*kiB, mbh);
+    error = multiboot_load_aout(random_buffer, 128*kiB, mb);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_aout failed");
 
     /* load_addr must be less than or equal to header_addr */
     mbh->load_addr = 1*MiB+1;
     mb = mb_scan(random_buffer, 128*kiB);
-    error = multiboot_load_aout(random_buffer, 128*kiB, mbh);
+    error = multiboot_load_aout(random_buffer, 128*kiB, mb);
     ATF_CHECK_EQ_MSG(EINVAL, error, "load_addr > header_addr");
 
     free(random_buffer);
@@ -272,7 +272,7 @@ ATF_TC_BODY(load_aout, tc)
     mbh->entry_addr = 1*MiB + sizeof(struct multiboot_header);
 
     mb = mb_scan(random_buffer, 128*kiB);
-    error = multiboot_load(random_buffer, 128*kiB, mbh);
+    error = multiboot_load(random_buffer, 128*kiB, mb);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load failed");
 
     free(random_buffer);
@@ -301,7 +301,7 @@ ATF_TC_BODY(load_elf_direct, tc)
 
     mb = mb_scan(kernel, kernsz);
     mbh = mb->header.mb.header;
-    multiboot_load_type(kernel, kernsz, &kernelf, mbh);
+    multiboot_load_type(kernel, kernsz, &kernelf, mb);
     error = multiboot_load_elf(kernel, kernsz, kernelf);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_elf failed");
 
@@ -329,7 +329,7 @@ ATF_TC_BODY(load_elf, tc)
 
     mb = mb_scan(kernel, kernsz);
     mbh = mb->header.mb.header;
-    error = multiboot_load(kernel, kernsz, mbh);
+    error = multiboot_load(kernel, kernsz, mb);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_elf failed");
 }
 
