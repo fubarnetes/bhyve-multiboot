@@ -18,7 +18,8 @@ size_t highmem = 0;
 jmp_buf jb;
 
 struct args loader_args = {
-    .kernel_filename = NULL
+    .kernel_filename = NULL,
+    .cmdline = NULL,
 };
 
 uint32_t
@@ -46,6 +47,10 @@ parse_args(struct args* args)
             }
 
             args->kernel_filename = value;
+        }
+
+        if (!strncmp(var, "cmdline", delim-var)) {
+            args->cmdline = value;
         }
     }
 
@@ -122,6 +127,13 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
     }
     else {
         if (multiboot_load(kernel, kernsz, mb)) {
+            goto error;
+        }
+
+        if (loader_args.cmdline &&
+            multiboot_info_set_cmdline(&mb->info, loader_args.cmdline))
+        {
+            ERROR(EINVAL, "Could not set kernel command line");
             goto error;
         }
     }

@@ -221,4 +221,13 @@ multiboot_load_elf(void *kernel, size_t kernsz, Elf *kernel_elf);
 uint32_t
 multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb);
 
+/**
+ * @brief Set multiboot info command line
+ *
+ * @param info pointer to the multiboot_info struct
+ * @param cmdline command line to set
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t
+multiboot_info_set_cmdline(struct multiboot_info* info, const char* cmdline);
 /* vim: set noexpandtab ts=4 : */ 

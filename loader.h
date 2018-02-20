@@ -51,6 +51,7 @@ extern jmp_buf jb;
 
 struct args {
     const char* kernel_filename;
+	const char* cmdline;
 };
 
 extern struct loader_args args;

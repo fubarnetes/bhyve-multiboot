@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
 #include <sys/types.h>
@@ -40,6 +41,22 @@
 #include <allocator.h>
 
 void *entry = NULL;
+
+uint32_t
+multiboot_info_set_cmdline(struct multiboot_info* info, const char* cmdline)
+{
+    uint32_t error = 0;
+    size_t length = strlen(cmdline);
+    void* p_addr = allocate(length+1);
+
+    if (!p_addr)
+        return ENOMEM;
+
+    error = CALLBACK(copyin, cmdline, p_addr, length+1);
+    info->cmdline = p_addr;
+    info->flags |= MULTIBOOT_CMDLINE;
+    return error;
+}
 
 struct multiboot*
 mb_scan(void *kernel, size_t kernsz)

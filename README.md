@@ -17,6 +17,7 @@ bhyveload -h <hostbase> -m <memsize> -l /path/to/multiboot.so [[-e <key>=<value>
 
 With the following environment variables specified with -e:
 
-| name     | optional | description                                                                     |
-|----------|----------|---------------------------------------------------------------------------------|
-| `kernel` | no       | Path to the kernel image relative to `hostbase`. Must start with a leading `/`. |
+| name      | optional | description                                                                     |
+|-----------|----------|---------------------------------------------------------------------------------|
+| `kernel`  | no       | Path to the kernel image relative to `hostbase`. Must start with a leading `/`. |
+| `cmdline` | yes      | command line to pass to the kernel                                              |
