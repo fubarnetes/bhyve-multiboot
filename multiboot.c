@@ -64,7 +64,7 @@ mb_scan(void *kernel, size_t kernsz)
         /* For now, let's prefer Multiboot over Multiboot2,  as we don't aim to
          * support that yet. */
         if (mb->magic == MULTIBOOT1_MAGIC) {
-            mb->info.mb.header = (struct multiboot_header*) magic;
+            mb->header.mb.header = (struct multiboot_header*) magic;
 
             /* Check whether the Multiboot header is contained completely
              * within the first 8192 bytes required by the spec. */
@@ -76,8 +76,8 @@ mb_scan(void *kernel, size_t kernsz)
                 continue;
             }
 
-            if ((uint32_t) (mb->info.mb.header->magic
-                + mb->info.mb.header->flags + mb->info.mb.header->checksum))
+            if ((uint32_t) (mb->header.mb.header->magic
+                + mb->header.mb.header->flags + mb->header.mb.header->checksum))
             {
                 ERROR(EINVAL,
                     "Multiboot header has invalid checksum.");
@@ -88,9 +88,9 @@ mb_scan(void *kernel, size_t kernsz)
                    ((void*)magic - kernel));
         }
         else if (mb->magic == MULTIBOOT2_MAGIC) {
-            mb->info.mb2.header = (struct multiboot2_header*) magic;
+            mb->header.mb2.header = (struct multiboot2_header*) magic;
             if ((void*) magic >= kernel + 32768
-                - mb->info.mb2.header->header_length)
+                - mb->header.mb2.header->header_length)
             {
                 ERROR(EINVAL,
                     "Multiboot2 header found, but not in the first 32 kiB.");

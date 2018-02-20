@@ -79,7 +79,7 @@ struct multiboot {
         struct {
             struct multiboot2_header* header;
         } mb2;
-    } info;
+    } header;
 };
 
 /**

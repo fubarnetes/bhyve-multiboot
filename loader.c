@@ -121,7 +121,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
         goto error;
     }
     else {
-        if (multiboot_load(kernel, kernsz, mb->info.mb.header)) {
+        if (multiboot_load(kernel, kernsz, mb->header.mb.header)) {
             goto error;
         }
     }

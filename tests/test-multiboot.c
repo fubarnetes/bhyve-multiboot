@@ -75,7 +75,7 @@ ATF_TC_BODY(scan, tc)
 
     mb = mb_scan(MB_TESTDATA_START(mmap), MB_TESTDATA_SIZE(mmap));
     ATF_CHECK_EQ(MULTIBOOT1_MAGIC, mb->magic);
-    ATF_CHECK_MSG(mb->info.mb.header >= MB_TESTDATA_START(mmap),
+    ATF_CHECK_MSG(mb->header.mb.header >= MB_TESTDATA_START(mmap),
         "mb_scan did not find the header");
 
     ATF_CHECK(urandom = fopen("/dev/urandom", "r"));
@@ -94,7 +94,7 @@ ATF_TC_BODY(scan, tc)
     mbh->flags = 0;
     mbh->checksum = (uint32_t) 0U-MULTIBOOT1_MAGIC;
     mb = mb_scan(random_buffer, 128*kiB);
-    ATF_CHECK_EQ_MSG(mb->info.mb.header, mbh,
+    ATF_CHECK_EQ_MSG(mb->header.mb.header, mbh,
                         "did not find crafted valid header");
     mbh = NULL;
 
@@ -162,7 +162,7 @@ ATF_TC_BODY(loadtype, tc)
 
     mb = mb_scan(kernel, kernsz);
 
-    type = multiboot_load_type(kernel, kernsz, &kernelf, mb->info.mb.header);
+    type = multiboot_load_type(kernel, kernsz, &kernelf, mb->header.mb.header);
     ATF_CHECK_EQ_MSG(type, LOAD_ELF, "mmap test kernel not loaded as ELF");
 
     ATF_CHECK(urandom = fopen("/dev/urandom", "r"));
@@ -176,11 +176,11 @@ ATF_TC_BODY(loadtype, tc)
     mbh->flags = 0 | MULTIBOOT_AOUT_KLUDGE;
     mbh->checksum = (uint32_t) 0U-MULTIBOOT1_MAGIC-(mbh->flags);
     mb = mb_scan(random_buffer, 128*kiB);
-    ATF_CHECK_EQ_MSG(mb->info.mb.header, mbh,
+    ATF_CHECK_EQ_MSG(mb->header.mb.header, mbh,
                      "did not find crafted valid header");
     mbh = NULL;
     type = multiboot_load_type(random_buffer, 128*kiB,
-                               &kernelf, mb->info.mb.header);
+                               &kernelf, mb->header.mb.header);
     ATF_CHECK_EQ_MSG(type, LOAD_AOUT,
                      "random test data not loaded as a.out kludge");
     ATF_CHECK_EQ_MSG(NULL, kernelf, "ELF resources not freed");
@@ -300,7 +300,7 @@ ATF_TC_BODY(load_elf_direct, tc)
     init_allocator(lowmem, highmem);
 
     mb = mb_scan(kernel, kernsz);
-    mbh = mb->info.mb.header;
+    mbh = mb->header.mb.header;
     multiboot_load_type(kernel, kernsz, &kernelf, mbh);
     error = multiboot_load_elf(kernel, kernsz, kernelf);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_elf failed");
@@ -328,7 +328,7 @@ ATF_TC_BODY(load_elf, tc)
     init_allocator(lowmem, highmem);
 
     mb = mb_scan(kernel, kernsz);
-    mbh = mb->info.mb.header;
+    mbh = mb->header.mb.header;
     error = multiboot_load(kernel, kernsz, mbh);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_load_elf failed");
 }
