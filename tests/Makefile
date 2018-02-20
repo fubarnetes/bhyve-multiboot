@@ -14,6 +14,8 @@ OUTPUT_BFD=elf64-x86-64-freebsd
 MB_DIR=data/multiboot
 MB_TESTCASES=data_multiboot_mmap.o data_multiboot_modules.o
 
+MOCK_BHYVELOAD=mock/bhyveload.o mock/compat-strlcat.o mock/compat-strlcpy.o
+
 .PHONY: all
 all: test-allocator test-loader test-mock-bhyveload test-multiboot
 
@@ -45,10 +47,10 @@ data_multiboot_mmap.o: ${MB_DIR}/mmap.elf
 data_multiboot_modules.o: ${MB_DIR}/modules.elf
 	$(OBJCOPY) --input binary --binary-architecture i386 --output ${OUTPUT_BFD} $> $@
 
-test-multiboot: test-multiboot.o ${MB_TESTCASES} ../libmultiboot_p.a
+test-multiboot: test-multiboot.o ${MB_TESTCASES} ${MOCK_BHYVELOAD} ../libmultiboot_p.a
 	$(CC) ${LDFLAGS} ${CFLAGS} -o $@ $> ${LIBATF_C} ${LIBELF}
 
-test-mock-bhyveload: test-mock-bhyveload.o mock/bhyveload.o mock/compat-strlcat.o mock/compat-strlcpy.o
+test-mock-bhyveload: test-mock-bhyveload.o  ${MOCK_BHYVELOAD}
 	$(CC) ${LDFLAGS} ${CFLAGS} -o $@ $> ${LIBATF_C} ${LIBELF}
 
 test-loader: mock/bhyveload.o ../libmultiboot_p.a
