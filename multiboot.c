@@ -44,8 +44,8 @@ uint32_t
 multiboot_info_set_meminfo(struct multiboot_info* info,
                            uint32_t mem_lower, uint32_t mem_upper)
 {
-    info->mem_lower = mem_lower;
-    info->mem_upper = mem_upper;
+    info->mem_lower = mem_lower / kiB;
+    info->mem_upper = mem_upper / kiB;
     info->flags |= MULTIBOOT_MEMINFO;
     return 0;
 }
