@@ -185,6 +185,7 @@ struct multiboot {
     void* entry;
     Elf *kernel_elf;
     struct multiboot_info info;
+    void* info_addr;
 };
 
 /**
@@ -302,4 +303,13 @@ uint32_t multiboot_info_finalize(struct multiboot *mb);
  * @return uint32_t 0 on success, error code on failure
  */
 uint32_t multiboot_load_modules(struct multiboot* mb, modules_list_t *modules);
+
+/**
+ * @brief set up machine state to pass execution to the guest kernel
+ *
+ * @param mb pointer to the multiboot context
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t multiboot_enter(struct multiboot* mb);
+
 /* vim: set noexpandtab ts=4 : */ 

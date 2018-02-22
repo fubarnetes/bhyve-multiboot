@@ -32,7 +32,7 @@
 
 #include <userboot.h>
 
-#define USERBOOT_VERSION 4
+#define USERBOOT_VERSION 5
 #define MALLOCSZ	(64*1024*1024)
 
 #define BOOTLOADER_NAME "bhyve-multiboot.so"

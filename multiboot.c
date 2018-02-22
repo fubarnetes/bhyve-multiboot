@@ -143,12 +143,7 @@ multiboot_info_finalize(struct multiboot *mb)
     if (error)
         return error;
 
-    /*
-     * Multiboot specification, section 3.2:
-     * EBX Must contain the 32-bit physical address of the Multiboot information
-     * structure provided by the boot loader (see spec, section 3.3).
-     */
-    error = CALLBACK(vm_set_register, 0, VM_REG_GUEST_RBX, p_addr);
+    mb->info_addr = p_addr;
 
     return error;
 }
@@ -603,6 +598,57 @@ multiboot_load(void* kernel, size_t kernsz, struct multiboot *mb)
                 elf_end(mb->kernel_elf);
             return error;
     }
+}
+
+#define SET_REG(reg, value) do {\
+            error = CALLBACK(vm_set_register, 0, VM_REG_GUEST_ ## reg, value); \
+            if (error) \
+                return error; \
+    } while (0);
+
+#define SET_DESC(reg, base, limit, access) do { \
+            error = CALLBACK(vm_set_desc, 0, VM_REG_GUEST_ ## reg, base, limit, access); \
+            if (error) \
+                return error; \
+    } while (0);
+
+uint32_t
+multiboot_enter(struct multiboot* mb)
+{
+    uint32_t error = 0;
+
+    CALLBACK(vm_set_unrestricted_guest, 0, 1);
+    CALLBACK(vcpu_reset, 0);
+
+#define CR0_NE 0x20
+#define CR0_PE 0x01
+
+    SET_REG(CR0, CR0_NE | CR0_PE);
+
+    SET_DESC(CS, 0, 0xffffffff, 0xc09b);
+    SET_DESC(DS, 0, 0xffffffff, 0xc093);
+    SET_DESC(ES, 0, 0xffffffff, 0xc093);
+    SET_DESC(FS, 0, 0xffffffff, 0xc093);
+    SET_DESC(GS, 0, 0xffffffff, 0xc093);
+    SET_DESC(SS, 0, 0xffffffff, 0xc093);
+
+    SET_REG(CS, 0x10);
+    SET_REG(DS, 0x18);
+    SET_REG(ES, 0x18);
+    SET_REG(FS, 0x18);
+    SET_REG(GS, 0x18);
+    SET_REG(SS, 0x18);
+
+    /*
+     * Multiboot specification, section 3.2:
+     * EBX Must contain the 32-bit physical address of the Multiboot information
+     * structure provided by the boot loader (see spec, section 3.3).
+     */
+    SET_REG(RAX, MULTIBOOT1_BOOTLOADER_MAGIC);
+    SET_REG(RBX, mb->info_addr);
+    SET_REG(RIP, mb->entry);
+
+    return error;
 }
 
 /* vim: set noexpandtab ts=4 : */ 

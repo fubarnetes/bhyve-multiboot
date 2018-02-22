@@ -561,11 +561,7 @@ ATF_TC_BODY(info_finalize, tc)
     error = multiboot_info_finalize(&mb);
     ATF_CHECK_EQ_MSG(0, error, "multiboot_info_finalize failed");
 
-    error = vm_get_register(&ctx, 0, VM_REG_GUEST_RBX, &rbx);
-    ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
-    ATF_CHECK_MSG(rbx, "RBX should point to the multiboo header");
-
-    callbacks->copyout(callbacks_arg, (uint32_t) rbx & 0xFFFFFFFF, test_buffer,
+    callbacks->copyout(callbacks_arg, (uint32_t) mb.info_addr, test_buffer,
         sizeof(struct multiboot_info));
 
     ATF_CHECK_EQ(0, memcmp(&mb.info, test_buffer,
