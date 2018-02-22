@@ -69,8 +69,10 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
     callbacks_arg = arg;
 
     /* setjmp error anchor */
-    if (setjmp(jb))
+    if (setjmp(jb)) {
+        CALLBACK(exit, errno);
         return;
+    }
 
     if (parse_args(&loader_args))
         goto error;
