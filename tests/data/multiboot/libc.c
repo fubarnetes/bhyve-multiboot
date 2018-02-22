@@ -22,6 +22,8 @@
 
 #include "libc.h"
 
+static char serial_set_up = 0;
+
 void* memcpy(void *dest, const void *src, int n)
 {
     char *d = dest;
@@ -46,7 +48,25 @@ void* memset(void *b, int c, unsigned len)
 
 static void print_char(char c)
 {
-    outb(0xe9, c);
+    #if (OUTPUT != DEBUGCON)
+    /* Check if serial is set up */
+    if (!serial_set_up) {
+        outb(OUTPUT + 1, 0x00);    // Disable all interrupts
+        outb(OUTPUT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
+        outb(OUTPUT + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
+        outb(OUTPUT + 1, 0x00);    //                  (hi byte)
+        outb(OUTPUT + 3, 0x03);    // 8 bits, no parity, one stop bit
+        outb(OUTPUT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
+        outb(OUTPUT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+        serial_set_up = 1;
+    }
+    /* Check if transmit is empty */
+    while ( (inb(OUTPUT + 5) & 0x20) == 0 );
+    if ( c == '\n' )
+	    print_char('\r');
+    #endif
+
+    outb(OUTPUT, c);
 }
 
 static void print_str(char *s)

@@ -23,6 +23,17 @@
 #ifndef LIBC_H
 #define LIBC_H
 
+/* Serial Ports */
+#define DEBUGCON 0xe9
+#define COM1 0x3f8
+#define COM2 0x2F8
+#define COM3 0x3E8
+#define COM4 0x2E8
+
+#ifndef OUTPUT
+#define OUTPUT DEBUGCON
+#endif
+
 /* Integer types */
 
 typedef unsigned long long uint64_t;
@@ -51,6 +62,13 @@ typedef __builtin_va_list       va_list;
 static inline void outb(uint16_t port, uint8_t data)
 {
     asm volatile ("outb %0, %1" : : "a" (data), "Nd" (port));
+}
+
+static inline uint8_t inb(uint16_t port)
+{
+    uint8_t ret;
+    asm volatile ( "inb %1, %0" : "=a"(ret) : "Nd"(port) );
+    return ret;
 }
 
 

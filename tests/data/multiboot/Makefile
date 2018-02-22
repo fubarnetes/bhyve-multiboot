@@ -1,5 +1,6 @@
 CCFLAGS=-m32 -Wall -Wextra -Werror -fno-stack-protector -nostdinc -fno-builtin
 ASFLAGS=-m32
+OUTPUT=COM1
 
 UNAME_S!=uname -s
 LIBGCC!=$(CC) ${CCFLAGS} -print-libgcc-file-name
@@ -27,7 +28,7 @@ modules.elf: start.o modules.o libc.o
 	$(LD) $(LDFLAGS) -o $@ $> $(LIBGCC)
 
 .c.o:
-	$(CC) $(CCFLAGS) -c -o $@ $<
+	$(CC) -DOUTPUT=$(OUTPUT) $(CCFLAGS) -c -o $@ $<
 
 .S.o:
 	$(CC) $(ASFLAGS) -c -o $@ $<
