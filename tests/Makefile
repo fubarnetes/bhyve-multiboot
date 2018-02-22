@@ -29,9 +29,17 @@ clean:
 	$(MAKE) -C data/multiboot clean
 	rm -f test-allocator.o
 	rm -f test-mock-bhyveload.o
+	rm -f test-loader.o
+	rm -f test-multiboot.o
+	rm -f mock/compat-*.o
 	rm -f mock/bhyveload.o
 	rm -f test-allocator
-	rm *.gcda *.gcno *.gcov
+	rm -f test-loader
+	rm -f test-mock-bhyveload
+	rm -f test-multiboot
+	rm -f data_*.o
+	rm -f *.gcda *.gcno *.gcov
+	rm -f .depend.*
 
 .PHONY: ${MB_DIR}/mmap.elf
 ${MB_DIR}/mmap.elf:

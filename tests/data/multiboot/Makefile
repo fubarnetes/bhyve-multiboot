@@ -17,7 +17,7 @@ all: mmap.elf modules.elf
 
 .PHONY: clean
 clean:
-	rm -f start.o mmap.o libc.o test-multiboot.o
+	rm -f start.o mmap.o libc.o test-multiboot.o modules.o
 	rm -f mmap.elf
 	rm -f modules.elf
 
