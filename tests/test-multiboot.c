@@ -400,6 +400,30 @@ ATF_TC_BODY(sizeof_multiboot_info, tc)
 
 }
 
+ATF_TC(info_meminfo);
+ATF_TC_HEAD(info_meminfo, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test whether memory info is set in the "
+                                   "multiboot information structure");
+}
+ATF_TC_BODY(info_meminfo, tc)
+{
+    struct multiboot_info mbi;
+    uint32_t error;
+    mbi.mem_lower = 0;
+    mbi.mem_upper = 0;
+    mbi.flags = 0;
+
+    error = multiboot_info_set_meminfo(&mbi, 0xdead * kiB, 0xbeef * kiB);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_info_set_meminfo failed");
+
+    ATF_CHECK_EQ_MSG(0xdead, mbi.mem_lower, "mbi.mem_lower is actually %lx",
+                     mbi.mem_lower);
+    ATF_CHECK_EQ_MSG(0xbeef, mbi.mem_upper, "mbi.mem_upper is actually %lx",
+                     mbi.mem_upper);
+    ATF_CHECK_EQ(1, mbi.flags);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -410,6 +434,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, load_elf_direct);
     ATF_TP_ADD_TC(tp, load_elf);
     ATF_TP_ADD_TC(tp, sizeof_multiboot_info);
+    ATF_TP_ADD_TC(tp, info_meminfo);
 
     return atf_no_error();
 }
