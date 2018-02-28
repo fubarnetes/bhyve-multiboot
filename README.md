@@ -21,3 +21,4 @@ With the following environment variables specified with -e:
 |-----------|----------|---------------------------------------------------------------------------------|
 | `kernel`  | no       | Path to the kernel image relative to `hostbase`. Must start with a leading `/`. |
 | `cmdline` | yes      | command line to pass to the kernel                                              |
+| `module`  | yes      | Path to a module relative to `hostbase` and optional string to be passed in the format `module=/<filename>[:string]`<br/>Must start with a leading `/`. May be specified multiple times to load multiple modules. |

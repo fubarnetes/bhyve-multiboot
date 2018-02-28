@@ -153,6 +153,153 @@ multiboot_info_finalize(struct multiboot *mb)
     return error;
 }
 
+uint32_t
+multiboot_load_module(struct multiboot* mb, struct module *mod,
+                      struct multiboot_mods_entry* multiboot_mods_list)
+{
+    void *modfile = NULL, *modbuf = NULL;
+    int mode = 0, uid = 0, gid = 0;
+    size_t modsz = 0, resid = 0;
+    struct multiboot_mods_entry entry;
+
+    printf("loading module: %s (%s)\r\n", mod->filename,
+        mod->string ? mod->string : "\"\"");
+
+    if (CALLBACK(open, mod->filename, &modfile))
+    {
+        ERROR(errno, "could not open module");
+        return errno;
+    }
+
+    CALLBACK(stat, modfile, &mode, &uid, &gid, &modsz);
+
+    modbuf = malloc(modsz);
+
+    if (!modbuf || CALLBACK(read, modfile, modbuf, modsz, &resid)) {
+        ERROR(errno, "could not read module");
+        goto error;
+    }
+
+    /*
+     * Spec section 3.1.2, 'flags':
+     *
+     * If bit 0 in the ‘flags’ word is set, then all boot modules loaded along
+     * with the operating system must be aligned on page (4KB) boundaries.
+     * Some operating systems expect to be able to map the pages containing boot
+     * modules directly into a paged address space during startup, and thus need
+     * the boot modules to be page-aligned.
+     */
+    if (mb->header.mb.header->flags & MULTIBOOT_FLAG_ALIGN4k)
+        entry.mod_start = allocate_aligned(modsz);
+
+    else
+        entry.mod_start = allocate(modsz);
+
+    entry.mod_end = entry.mod_start + modsz;
+
+    if (!entry.mod_start) {
+        ERROR(ENOMEM, "could not allocate memory for module");
+        goto error;
+    }
+
+    if (CALLBACK(copyin, modbuf, entry.mod_start, modsz)) {
+        ERROR(EIO, "could not copy in module");
+        goto error;
+    }
+
+    /*
+     * Spec section 3.3:
+     *
+     * The ‘string’ field provides an arbitrary string to be associated with
+     * that particular boot module; it is a zero-terminated ASCII string, just
+     * like the kernel command line. The ‘string’ field may be 0 if there is no
+     * string associated with the module.
+     */
+    if (!mod->string) {
+        entry.string = 0;
+        goto out;
+    }
+
+    entry.string = allocate(strlen(mod->string) + 1);
+
+    if (CALLBACK(copyin, mod->string, entry.string, strlen(mod->string + 1))) {
+        ERROR(EIO, "could not copy in module string");
+        goto error;
+    }
+
+    /*
+     * The ‘reserved’ field must be set to 0 by the boot loader and ignored by
+     * the operating system.
+     */
+    entry.reserved = 0;
+
+ out:
+    multiboot_mods_list[mb->info.mods_count] = entry;
+    mb->info.mods_count ++;
+
+    free(modbuf);
+    CALLBACK(close, modfile);
+    return 0;
+
+ error:
+    if (modbuf)
+        free(modbuf);
+
+    CALLBACK(close, modfile);
+    return errno;
+}
+
+uint32_t
+multiboot_load_modules(struct multiboot* mb, modules_list_t *modules)
+{
+    struct module *mod;
+    struct multiboot_mods_entry *mods_list = NULL;
+    uint32_t error = 0, nmodules = 0;
+
+    /* Get number of modules */
+    SLIST_FOREACH(mod, modules, next) {
+        nmodules ++;
+    }
+
+    /* Allocate buffer for modules */
+    mb->info.mods_addr = allocate(
+        sizeof(struct multiboot_mods_entry) * nmodules);
+
+    if (!mb->info.mods_addr) {
+        ERROR(ENOMEM, "Could not allocate guest buffer for module list");
+        return ENOMEM;
+    }
+
+    mods_list = calloc(nmodules, sizeof(struct multiboot_mods_entry));
+    if (!mods_list) {
+        ERROR(ENOMEM, "Could not allocate host buffer for module list");
+        return ENOMEM;
+    }
+
+    /* Copy the modules into the guest and populate the module list */
+    SLIST_FOREACH(mod, modules, next) {
+        error = multiboot_load_module(mb, mod, mods_list);
+        if (error) {
+            free(mods_list);
+            return error;
+        }
+    }
+
+    error = CALLBACK(copyin, mods_list, mb->info.mods_addr,
+                     sizeof(struct multiboot_mods_entry) * nmodules);
+
+    if (error) {
+        ERROR(EIO, "Could not copy module list into guest");
+        free(mods_list);
+        return EIO;
+    }
+
+    mb->info.flags |= MULTIBOOT_MODS;
+
+    free (mods_list);
+    return 0;
+}
+
 struct multiboot*
 mb_scan(void *kernel, size_t kernsz)
 {

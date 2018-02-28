@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <libelf.h>
+#include <loader.h>
 
 #define MULTIBOOT1_MAGIC 0x1BADB002
 #define MULTIBOOT1_BOOTLOADER_MAGIC 0x2BADB002
@@ -149,6 +150,13 @@ struct multiboot_mmap_entry {
     uint64_t base_addr;
     uint64_t length;
     uint32_t type;
+} PACKED;
+
+struct multiboot_mods_entry {
+    uint32_t mod_start;
+    uint32_t mod_end;
+    uint32_t string;
+    uint32_t reserved;
 } PACKED;
 
 struct multiboot2_header {
@@ -286,4 +294,12 @@ multiboot_info_set_cmdline(struct multiboot_info* info, const char* cmdline);
  */
 uint32_t multiboot_info_finalize(struct multiboot *mb);
 
+/**
+ * @brief Load multiboot modules
+ *
+ * @param mb pointer to the multiboot context
+ * @param modules list of modules
+ * @return uint32_t 0 on success, error code on failure
+ */
+uint32_t multiboot_load_modules(struct multiboot* mb, modules_list_t *modules);
 /* vim: set noexpandtab ts=4 : */ 

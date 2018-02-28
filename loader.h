@@ -28,6 +28,7 @@
 #pragma once
 #include <setjmp.h>
 #include <sys/types.h>
+#include <sys/queue.h>
 
 #include <userboot.h>
 
@@ -51,9 +52,18 @@ extern void *callbacks_arg;
  */
 extern jmp_buf jb;
 
+struct module {
+    char *filename;
+    char *string;
+    SLIST_ENTRY(module) next;
+};
+
+typedef SLIST_HEAD(modules, module) modules_list_t;
+
 struct args {
     const char* kernel_filename;
 	const char* cmdline;
+    modules_list_t modules;
 };
 
 extern struct loader_args args;

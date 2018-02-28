@@ -8,6 +8,7 @@
 #include <loader.h>
 #include <allocator.h>
 #include <multiboot.h>
+#include <sys/queue.h>
 
 struct loader_callbacks *callbacks;
 void *callbacks_arg;
@@ -20,18 +21,21 @@ jmp_buf jb;
 struct args loader_args = {
     .kernel_filename = NULL,
     .cmdline = NULL,
+    .modules = SLIST_HEAD_INITIALIZER(.modules),
 };
 
 uint32_t
 parse_args(struct args* args)
 {
-    const char *var, *delim, *value;
+    const char *var, *delim, *delim2, *value, *value2, *end;
     int i = 0;
+    struct module *new_module;
 
     /* iterate over environment */
     while ( (var = CALLBACK(getenv, i++)) ) {
         delim = strchr(var, '=');
         value = delim+1;
+        end = var + strlen(var);
 
         if (!delim) {
             /* no value specified */
@@ -51,6 +55,36 @@ parse_args(struct args* args)
 
         if (!strncmp(var, "cmdline", delim-var)) {
             args->cmdline = value;
+        }
+
+        if (!strncmp(var, "module", delim-var)) {
+            delim2 = strchr(value, ':');
+
+            /* If no delimiter was found, no optional string was given */
+            if (!delim2)
+                delim2 = end;
+
+            /* If the delimiter is the last character, remove it. */
+            if (delim2 == end - 1) {
+                end --;
+            }
+
+            /* The optional string starts directly after the deliminator */
+            value2 = delim2 + 1;
+
+            new_module = calloc(1, sizeof(struct module));
+            new_module->filename = malloc(delim2 - value + 1);
+            memcpy(new_module->filename, value, delim2 - value);
+            new_module->filename[delim2 - value] = '\0';
+
+            new_module->string = NULL;
+            if (delim2 != end) {
+                new_module->string = malloc(end - value2 + 1);
+                memcpy(new_module->string, value2, end - value2 + 1);
+                new_module->string[end - value2] = '\0';
+            }
+
+            SLIST_INSERT_HEAD(&loader_args.modules, new_module, next);
         }
     }
 
@@ -154,6 +188,10 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 
         if (mb->header.mb.header->flags & MULTIBOOT_FLAG_GRAPHICS) {
             ERROR(ENOTSUP, "VBE info requested by kernel, but not supported.");
+        }
+
+        if (multiboot_load_modules(mb, &loader_args.modules)) {
+            ERROR(ECANCELED, "Could not load modules");
         }
 
         if (multiboot_info_finalize(mb)) {
