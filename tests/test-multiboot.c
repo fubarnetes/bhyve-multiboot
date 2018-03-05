@@ -482,6 +482,35 @@ ATF_TC_BODY(info_mmap, tc)
     ATF_CHECK_EQ_MSG(1<<6 | 1<<0, mbi.flags, "Bits 6 and 1 of flags not set.");
 }
 
+ATF_TC(info_name);
+ATF_TC_HEAD(info_name, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test setting of boot loader name");
+}
+ATF_TC_BODY(info_name, tc)
+{
+    struct multiboot_info mbi;
+    uint32_t name_addr, error;
+    const char *test_name = "test name";
+    char *test_buffer = calloc(1, strlen(test_name)+1);
+
+    setmem(2*MiB, 0);
+    init_allocator(2 * MiB, 0);
+
+    mbi.flags = 0;
+
+    error = multiboot_info_set_loader_name(&mbi, test_name);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_info_set_loader_name failed");
+
+    name_addr = mbi.boot_loader_name;
+    callbacks->copyout(callbacks_arg, name_addr, test_buffer, strlen(test_name));
+
+    ATF_CHECK_STREQ(test_name, test_buffer);
+    free(test_buffer);
+
+    ATF_CHECK_EQ(1<<9, mbi.flags);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -494,6 +523,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, sizeof_multiboot_info);
     ATF_TP_ADD_TC(tp, info_meminfo);
     ATF_TP_ADD_TC(tp, info_mmap);
+    ATF_TP_ADD_TC(tp, info_name);
 
     return atf_no_error();
 }
