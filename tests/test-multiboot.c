@@ -511,6 +511,36 @@ ATF_TC_BODY(info_name, tc)
     ATF_CHECK_EQ(1<<9, mbi.flags);
 }
 
+ATF_TC(info_cmdline);
+ATF_TC_HEAD(info_cmdline, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test setting of command line");
+}
+ATF_TC_BODY(info_cmdline, tc)
+{
+    struct multiboot_info mbi;
+    uint32_t cmdline_addr, error;
+    const char *test_cmdline = "test command line";
+    char *test_buffer = calloc(1, strlen(test_cmdline)+1);
+
+    setmem(2*MiB, 0);
+    init_allocator(2 * MiB, 0);
+
+    mbi.flags = 0;
+
+    error = multiboot_info_set_cmdline(&mbi, test_cmdline);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_info_set_cmdline failed");
+
+    cmdline_addr = mbi.cmdline;
+    callbacks->copyout(callbacks_arg, cmdline_addr, test_buffer,
+        strlen(test_cmdline));
+
+    ATF_CHECK_STREQ(test_cmdline, test_buffer);
+    free(test_buffer);
+
+    ATF_CHECK_EQ(1<<2, mbi.flags);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -524,6 +554,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, info_meminfo);
     ATF_TP_ADD_TC(tp, info_mmap);
     ATF_TP_ADD_TC(tp, info_name);
+    ATF_TP_ADD_TC(tp, info_cmdline);
 
     return atf_no_error();
 }
