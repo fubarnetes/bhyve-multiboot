@@ -541,6 +541,38 @@ ATF_TC_BODY(info_cmdline, tc)
     ATF_CHECK_EQ(1<<2, mbi.flags);
 }
 
+ATF_TC(info_finalize);
+ATF_TC_HEAD(info_finalize, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test loading multiboot information "
+        "structure into the guest");
+}
+ATF_TC_BODY(info_finalize, tc)
+{
+    struct multiboot mb;
+    uint32_t error;
+    uint64_t rbx;
+    char *test_buffer = malloc(sizeof(struct multiboot_info));
+    struct vmctx ctx;
+
+    setmem(2*MiB, 0);
+    init_allocator(2 * MiB, 0);
+
+    error = multiboot_info_finalize(&mb);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_info_finalize failed");
+
+    error = vm_get_register(&ctx, 0, VM_REG_GUEST_RBX, &rbx);
+    ATF_CHECK_EQ_MSG(0, error, "vm_get_register failed");
+    ATF_CHECK_MSG(rbx, "RBX should point to the multiboo header");
+
+    callbacks->copyout(callbacks_arg, (uint32_t) rbx & 0xFFFFFFFF, test_buffer,
+        sizeof(struct multiboot_info));
+
+    ATF_CHECK_EQ(0, memcmp(&mb.info, test_buffer,
+        sizeof(struct multiboot_info)));
+    free(test_buffer);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -555,6 +587,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, info_mmap);
     ATF_TP_ADD_TC(tp, info_name);
     ATF_TP_ADD_TC(tp, info_cmdline);
+    ATF_TP_ADD_TC(tp, info_finalize);
 
     return atf_no_error();
 }
