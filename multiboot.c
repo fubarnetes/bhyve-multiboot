@@ -64,14 +64,14 @@ multiboot_info_set_mmap(struct multiboot_info* info)
     mmap[0].type = MULTIBOOT_MMAP_AVAILABLE;
     mmap[1].size = sizeof(struct multiboot_mmap_entry) - sizeof(uint32_t) ;
     mmap[1].base_addr = 1 * MiB;
-    mmap[1].length = info->mem_lower - 1*MiB;
+    mmap[1].length = info->mem_lower * kiB - 1*MiB;
     mmap[1].type = MULTIBOOT_MMAP_AVAILABLE;
 
     if(info->mem_upper) {
         nsegs = 3;
         mmap[2].size = sizeof(struct multiboot_mmap_entry) - sizeof(uint32_t) ;
         mmap[2].base_addr = 4 * GiB;
-        mmap[2].length = info->mem_upper;
+        mmap[2].length = info->mem_upper * kiB;
         mmap[2].type = MULTIBOOT_MMAP_AVAILABLE;
     }
 

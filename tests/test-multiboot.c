@@ -424,6 +424,64 @@ ATF_TC_BODY(info_meminfo, tc)
     ATF_CHECK_EQ(1, mbi.flags);
 }
 
+ATF_TC(info_mmap);
+ATF_TC_HEAD(info_mmap, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test the memory map set in the multiboot "
+        "information structure");
+}
+ATF_TC_BODY(info_mmap, tc)
+{
+    struct multiboot_info mbi;
+    uint32_t error, entry_addr, i;
+    struct multiboot_mmap_entry entry;
+
+    mbi.flags = 0;
+    mbi.mem_lower = 0;
+    mbi.mem_upper = 0;
+    mbi.mmap_addr = 0;
+    mbi.mmap_length = 0;
+
+    setmem(4*MiB, 4*MiB);
+    init_allocator(4 * MiB, 4 * MiB);
+    error = multiboot_info_set_meminfo(&mbi, 4 * MiB, 4 * MiB);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_info_set_meminfo failed.");
+
+    ATF_CHECK_EQ(4*MiB / kiB, mbi.mem_lower);
+    ATF_CHECK_EQ(4*MiB / kiB, mbi.mem_upper);
+
+    error = multiboot_info_set_mmap(&mbi);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_info_set_mmap failed.");
+
+    for (i = 0, entry_addr = mbi.mmap_addr;
+        entry_addr < mbi.mmap_addr + mbi.mmap_length;
+        entry_addr += entry.size + 4, i++)
+    {
+        callbacks->copyout(callbacks_arg, entry_addr, &entry, sizeof(entry));
+
+        ATF_CHECK_EQ(20, entry.size);
+        ATF_CHECK_EQ(MULTIBOOT_MMAP_AVAILABLE, entry.type);
+
+        switch(i) {
+            case 0:
+                ATF_CHECK_EQ(0, entry.base_addr);
+                ATF_CHECK_EQ(640 * kiB, entry.length);
+                break;
+            case 1:
+                ATF_CHECK_EQ(1*MiB, entry.base_addr);
+                ATF_CHECK_EQ(3*MiB, entry.length);
+                break;
+            case 2:
+                ATF_CHECK_EQ(4*GiB, entry.base_addr);
+                ATF_CHECK_EQ(4*MiB, entry.length);
+                break;
+        }
+    }
+
+
+    ATF_CHECK_EQ_MSG(1<<6 | 1<<0, mbi.flags, "Bits 6 and 1 of flags not set.");
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -435,6 +493,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, load_elf);
     ATF_TP_ADD_TC(tp, sizeof_multiboot_info);
     ATF_TP_ADD_TC(tp, info_meminfo);
+    ATF_TP_ADD_TC(tp, info_mmap);
 
     return atf_no_error();
 }
