@@ -259,4 +259,18 @@ struct loader_callbacks {
     int    (*vm_set_register)(void *arg, int vcpu, int reg, uint64_t val);
     int    (*vm_set_desc)(void *arg, int vcpu, int reg, uint64_t base,
                           u_int limit, u_int access);
+
+    /*
+     * Version 5 additions.
+     *
+     * vm_get_unrestricted_guest checks support for the UNRESTRICTED_GUEST
+     * capability and if supported, sets 'retval'. If unsupported, an error
+     * code is returned.
+     *
+     * vm_set_unrestricted_guest sets the UNRESTRICTED_GUEST capability if
+     * supported, and returns an error code otherwise.
+     */
+    int (*vm_get_unrestricted_guest)(void* arg, int vcpu, int *retval);
+    int (*vm_set_unrestricted_guest)(void* arg, int vcpu, int val);
+    int (*vcpu_reset)(void* arg, int vcpu);
 };
