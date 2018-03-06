@@ -666,6 +666,12 @@ ATF_TC_BODY(info_module, tc)
         "Expected second module to be 4k-aligned, but it wasn't (start = %x)",
         mods_list[2].mod_start);
 
+    /* multiboot_load_module should fail if the file does not exist */
+    test_module.filename = "/does_not_exist";
+    error = multiboot_load_module(&mb, &test_module, mods_list);
+    ATF_CHECK_EQ_MSG(EINVAL, error,
+        "multiboot_load_module did not error for non-existent file");
+
     free(mods_list);
     free(test_buffer);
     unlink("test_data");
