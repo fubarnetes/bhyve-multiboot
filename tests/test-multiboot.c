@@ -671,6 +671,67 @@ ATF_TC_BODY(info_module, tc)
     unlink("test_data");
 }
 
+ATF_TC(info_modules);
+ATF_TC_HEAD(info_modules, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test loading modules");
+}
+ATF_TC_BODY(info_modules, tc)
+{
+    uint32_t error = 0;
+    modules_list_t modules = SLIST_HEAD_INITIALIZER(modules);
+    struct multiboot_mods_entry mods_list[3];
+    struct module mod[] = {
+        { .filename = "/mod1", .string = "string  1" },
+        { .filename = "/mod2", .string = "string  2" },
+        { .filename = "/mod3", .string = "string  3" },
+    };
+
+    const char *test_data[] = {
+        "test data for module 1: a",
+        "test data for module 2: bb",
+        "test data for module 3: ccc",
+    };
+
+    struct multiboot_header mbh = {
+        .flags=0,
+    };
+
+    struct multiboot mb = {
+        .info.flags = 0,
+        .info.mods_count = 0,
+        .info.mods_addr = 0,
+        .header.mb.header = &mbh,
+    };
+
+    setmem(2*MiB, 0);
+    init_allocator(2 * MiB, 0);
+
+    mkfile("mod1", test_data[0], strlen(test_data[0])+1);
+    mkfile("mod2", test_data[1], strlen(test_data[1])+1);
+    mkfile("mod3", test_data[2], strlen(test_data[2])+1);
+
+    SLIST_INSERT_HEAD(&modules, &mod[2], next);
+    SLIST_INSERT_HEAD(&modules, &mod[1], next);
+    SLIST_INSERT_HEAD(&modules, &mod[0], next);
+
+    error = multiboot_load_modules(&mb, &modules);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_load_modules failed");
+    ATF_CHECK_EQ(3, mb.info.mods_count);
+    ATF_CHECK_EQ(1<<3, mb.info.flags);
+    ATF_CHECK(mb.info.mods_addr != 0);
+
+    callbacks->copyout(callbacks_arg, mb.info.mods_addr, mods_list,
+        3 * sizeof(struct multiboot_mods_entry));
+
+    ATF_CHECK_EQ(strlen(test_data[0])+1,
+        mods_list[0].mod_end - mods_list[0].mod_start);
+    ATF_CHECK_EQ(strlen(test_data[1])+1,
+        mods_list[1].mod_end - mods_list[1].mod_start);
+    ATF_CHECK_EQ(strlen(test_data[2])+1,
+        mods_list[2].mod_end - mods_list[2].mod_start);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -687,6 +748,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, info_cmdline);
     ATF_TP_ADD_TC(tp, info_finalize);
     ATF_TP_ADD_TC(tp, info_module);
+    ATF_TP_ADD_TC(tp, info_modules);
 
     return atf_no_error();
 }
