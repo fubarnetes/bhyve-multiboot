@@ -573,6 +573,104 @@ ATF_TC_BODY(info_finalize, tc)
     free(test_buffer);
 }
 
+extern uint32_t
+multiboot_load_module(struct multiboot* mb, struct module *mod,
+                      struct multiboot_mods_entry* multiboot_mods_list);
+
+static void
+mkfile(const char* filename, const char* data, size_t size)
+{
+    FILE* f = fopen(filename, "w");
+    fwrite(data, size, 1, f);
+    fclose(f);
+}
+
+ATF_TC(info_module);
+ATF_TC_HEAD(info_module, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Test loading a single module");
+}
+ATF_TC_BODY(info_module, tc)
+{
+    uint32_t error = 0;
+    const char *test_data = "This is a test module";
+    char *test_buffer = calloc(1, strlen(test_data)+1);
+    struct multiboot_mods_entry *mods_list = NULL;
+    struct module test_module = {
+        .filename = "/test_module",
+        .string = "test_string",
+    };
+    struct multiboot_header mbh = {
+        .flags=0,
+    };
+    struct multiboot mb = {
+        .info.mods_count = 0,
+        .header.mb.header = &mbh,
+    };
+
+    setmem(2*MiB, 0);
+    init_allocator(2 * MiB, 0);
+
+    /* Create a sample module to be loaded */
+    mkfile("test_module", test_data, strlen(test_data)+1);
+
+    /*
+     * Allocate a buffer for the module list. This is otherwise done by
+     * multiboot_load_modules.
+     */
+    mods_list = calloc(3, sizeof(struct multiboot_mods_entry));
+
+    error = multiboot_load_module(&mb, &test_module, mods_list);
+    ATF_CHECK_EQ_MSG(0, error, "multiboot_load_module failed");
+    ATF_CHECK_EQ(1, mb.info.mods_count);
+
+    ATF_CHECK(mods_list[0].mod_start != 0);
+    ATF_CHECK_EQ_MSG(strlen(test_data)+1,
+        mods_list[0].mod_end - mods_list[0].mod_start,
+        "expected module to be of length %x, but end - start is %x",
+        strlen(test_data)+1, mods_list[0].mod_end - mods_list[0].mod_start);
+    ATF_CHECK(mods_list[0].string != 0);
+    ATF_CHECK_EQ(0, mods_list[0].reserved);
+
+    callbacks->copyout(test_buffer, mods_list[0].string, test_buffer,
+        strlen(test_module.string)+1);
+    ATF_CHECK_STREQ_MSG(test_module.string, test_buffer,
+        "reading back the test module string failed: expecting '%s', but got "
+        "'%s'", test_module.string, test_buffer);
+
+    callbacks->copyout(callbacks_arg, mods_list[0].mod_start, test_buffer,
+        mods_list[0].mod_end - mods_list[0].mod_start);
+    ATF_CHECK_MSG(memcmp(test_data, test_buffer,
+            mods_list[0].mod_end - mods_list[0].mod_start) == 0,
+        "reading back the test module content failed: expecting '%s', but got "
+        "'%s'", test_module.string, test_buffer);
+
+    /* The next module should not be 4k-aligned */
+    error = multiboot_load_module(&mb, &test_module, mods_list);
+    ATF_CHECK_EQ_MSG(0, error,
+        "multiboot_load_module failed for the second module");
+    ATF_CHECK_EQ(2, mb.info.mods_count);
+    ATF_CHECK(mods_list[1].mod_start != 0);
+    ATF_CHECK_MSG((mods_list[1].mod_start & 0xFFF) != 0,
+        "Expected second module to not be 4k-aligned, but it was (start = %x)",
+        mods_list[1].mod_start);
+
+    /* If the kernel requests modules to be loaded 4k-aligned, they should be */
+    mbh.flags = 1;
+    error = multiboot_load_module(&mb, &test_module, mods_list);
+    ATF_CHECK_EQ_MSG(0, error,
+        "multiboot_load_module failed for the third module");
+    ATF_CHECK_EQ(3, mb.info.mods_count);
+    ATF_CHECK(mods_list[2].mod_start != 0);
+    ATF_CHECK_EQ_MSG(0, mods_list[2].mod_start & 0xFFF,
+        "Expected second module to be 4k-aligned, but it wasn't (start = %x)",
+        mods_list[2].mod_start);
+
+    free(mods_list);
+    free(test_buffer);
+    unlink("test_data");
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, testdata);
@@ -588,6 +686,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, info_name);
     ATF_TP_ADD_TC(tp, info_cmdline);
     ATF_TP_ADD_TC(tp, info_finalize);
+    ATF_TP_ADD_TC(tp, info_module);
 
     return atf_no_error();
 }

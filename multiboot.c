@@ -222,7 +222,7 @@ multiboot_load_module(struct multiboot* mb, struct module *mod,
 
     entry.string = allocate(strlen(mod->string) + 1);
 
-    if (CALLBACK(copyin, mod->string, entry.string, strlen(mod->string + 1))) {
+    if (CALLBACK(copyin, mod->string, entry.string, strlen(mod->string) + 1)) {
         ERROR(EIO, "could not copy in module string");
         goto error;
     }
